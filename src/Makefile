@@ -37,6 +37,6 @@ lexer.sml: lexer.lex
 
 depend: .depend
 .depend: $(SRCS)
-	$(MLDEP) > .depend
+	@$(MLDEP) > .depend
 
 -include .depend
