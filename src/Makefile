@@ -39,4 +39,4 @@ depend: .depend
 .depend: $(SRCS)
 	$(MLDEP) > .depend
 
-include .depend
+-include .depend

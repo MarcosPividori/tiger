@@ -14,7 +14,7 @@ clean:
 	$(RM) -rf $(BUILDDIR)
 
 $(BUILDDIR):
-	mkdir $(BUILDDIR)
+	@mkdir $(BUILDDIR)
 
 $(BUILDDIR)/%: $(SRCDIR)/% | $(BUILDDIR)
-	$(CP) $< $@
+	@$(CP) $< $@
