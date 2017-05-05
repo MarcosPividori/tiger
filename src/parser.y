@@ -57,7 +57,7 @@ fun joinDecs(TypeDec [x], (TypeDec xs)::rest) = TypeDec(x::xs)::rest
 %%
 
 prog:
-    expr EOF
+    expr EOF {$1}
   ;
 
 expr:
