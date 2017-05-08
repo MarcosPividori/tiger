@@ -1,14 +1,10 @@
 open lexer
 open parser
+open error
 open escape
 open BasicIO Nonstdio
 
-fun printStderr msg = (output (std_err, msg); flush_out std_err)
-
-fun failWithMsg file line msg =
-  raise Fail (file ^ ":" ^ makestring(line) ^ ": " ^ msg)
-
-fun errParsing file lbuf = failWithMsg file (!numLine)
+fun errParsing lbuf = raiseError (!numLine)
   ("Error when parsing: " ^ (Lexing.getLexeme lbuf))
 
 fun lexStream(is: instream) =
@@ -30,11 +26,14 @@ fun main args =
         [n] => ((open_in n, n) handle _ => raise Fail (n ^ " doesn't exist!"))
       | []  => (std_in, "stdin")
       | _   => raise Fail "unknown option!"
-    val lexbuf = lexStream entrada
-    val expr = prog Token lexbuf handle _ => errParsing fileName lexbuf
-    val _ = findEscape expr
   in
-    printStderr "Successful compilation\n"
-  end handle Fail msg => printStderr(msg ^ "\n")
+    let
+      val lexbuf = lexStream entrada
+      val expr = prog Token lexbuf handle _ => errParsing lexbuf
+      val _ = findEscape expr
+    in
+      printStderr "Successful compilation\n"
+    end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg
+  end handle Fail msg => printErrorMsg NONE NONE msg
 
 val _ = main(CommandLine.arguments())

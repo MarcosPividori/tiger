@@ -3,23 +3,24 @@ struct
 local
 
 open abs
+open error
 open hashtable
 
 type depth = int
 type escEnv = (string, depth * bool ref) HashT
 
-fun travVar env d s =
+fun travVar env d s nl =
   case s of
     SimpleVar s =>
       (case htSearch env s of
          SOME (dd, b) => if d > dd then b:=true else ()
-       | NONE => raise Fail ("Unknown variable '"^s^"'."))
-  | FieldVar(v, s) => travVar env d v
-  | SubscriptVar(v, e) => (travVar env d v; travExp env d e)
+       | NONE => raiseError nl ("Unknown variable '"^s^"'."))
+  | FieldVar(v, s) => travVar env d v nl
+  | SubscriptVar(v, e) => (travVar env d v nl; travExp env d e)
 
 and travExp env d s =
   case s of
-    VarExp(v, _) => travVar env d v
+    VarExp(v, nl) => travVar env d v nl
   | CallExp({args, ...}, nl) => travExp env d (SeqExp(args, nl))
   | OpExp({left, right, ...}, _) =>
       (travExp env d left; travExp env d right)
@@ -27,8 +28,8 @@ and travExp env d s =
       List.app (travExp env d o #2) fields
   | SeqExp(le, _) =>
       List.app (travExp env d) le
-  | AssignExp({var, exp}, _) =>
-      (travVar env d var; travExp env d exp)
+  | AssignExp({var, exp}, nl) =>
+      (travVar env d var nl; travExp env d exp)
   | IfExp({test, then', else'=NONE}, _) =>
       (travExp env d test; travExp env d then')
   | IfExp({test, then', else'=SOME e}, _) =>
