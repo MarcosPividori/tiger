@@ -1,5 +1,6 @@
 open lexer
 open parser
+open escape
 open BasicIO Nonstdio
 
 fun printStderr msg = (output (std_err, msg); flush_out std_err)
@@ -31,6 +32,7 @@ fun main args =
       | _   => raise Fail "unknown option!"
     val lexbuf = lexStream entrada
     val expr = prog Token lexbuf handle _ => errParsing fileName lexbuf
+    val _ = findEscape expr
   in
     printStderr "Successful compilation\n"
   end handle Fail msg => printStderr(msg ^ "\n")
