@@ -135,7 +135,7 @@ ty_field_list:
   ;
 
 ty_field:
-    ID DOSP ID {{name=$1, escape=ref false, typ=NameTy $3}}
+    ID DOSP ID {{name=$1, escape=ref false, typ=$3}}
   ;
 
 vardec:
