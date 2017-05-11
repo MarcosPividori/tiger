@@ -2,6 +2,7 @@ open lexer
 open parser
 open error
 open escape
+open seman
 open BasicIO Nonstdio
 
 fun errParsing lbuf = raiseError (!numLine)
@@ -32,6 +33,7 @@ fun main args =
       val expr = prog Token lexbuf handle _ => errParsing lexbuf
       val _ = findEscape expr
     in
+      transProg expr;
       printStderr "Successful compilation\n"
     end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg
   end handle Fail msg => printErrorMsg NONE NONE msg
