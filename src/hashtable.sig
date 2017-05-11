@@ -19,6 +19,8 @@ val htSearch  : (''a, 'b) HashT -> ''a -> 'b option
 
 val htGet     : (''a, 'b) HashT -> ''a -> 'b
 
+val htFromList : (''a * 'b) list -> (''a, 'b) HashT
+
 val htApp     : (''a -> 'b) -> ('c, ''a) HashT -> ('c, 'b) HashT
 
 val htAApp    : (''a -> ''c) -> ('b -> 'd) -> (''a, 'b) HashT -> (''c, 'd) HashT
