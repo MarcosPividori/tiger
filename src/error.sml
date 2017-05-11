@@ -14,4 +14,4 @@ fun printErrorMsg file line msg =
     val lineStr = case line of
       SOME l => (makestring l) ^ ":"
     | NONE => ""
-  in printStderr (fileStr ^ lineStr ^ " " ^ msg ^ "\n") end
+  in printStderr (fileStr ^ lineStr ^ " Error: " ^ msg ^ "\n") end

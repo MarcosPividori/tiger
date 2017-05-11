@@ -5,7 +5,7 @@ open escape
 open BasicIO Nonstdio
 
 fun errParsing lbuf = raiseError (!numLine)
-  ("Error when parsing: " ^ (Lexing.getLexeme lbuf))
+  ("when parsing: " ^ (Lexing.getLexeme lbuf))
 
 fun lexStream(is: instream) =
   Lexing.createLexer(fn b => fn n => buff_input is b 0 n)
