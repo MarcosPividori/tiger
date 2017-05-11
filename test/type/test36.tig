@@ -1,0 +1,7 @@
+/* EXPECTED: "Error" */
+/* error : formals are fewer then actuals */
+let
+	function g (a : int , b : string) : int = a
+in
+	g (3,"one",5)
+end

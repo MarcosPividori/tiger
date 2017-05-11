@@ -1,0 +1,4 @@
+/* EXPECTED: "Successful" */
+(while 1
+do
+  if 1 then break; 0)

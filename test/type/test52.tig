@@ -1,0 +1,7 @@
+/* EXPECTED: "Error" */
+/* duplicated param name */
+let
+  function do_nothing (a : int, a : string) : string = a
+in
+  0
+end

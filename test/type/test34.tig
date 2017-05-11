@@ -1,0 +1,7 @@
+/* EXPECTED: "Error" */
+/* error : formals and actuals have different types */
+let
+	function g (a : int , b : string) : int = a
+in
+	g ("one", "two")
+end

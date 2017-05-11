@@ -1,0 +1,4 @@
+/* EXPECTED: "Error" */
+/* error : comparison of incompatible types */
+
+3 > "df"
