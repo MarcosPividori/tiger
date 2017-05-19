@@ -7,6 +7,8 @@ open abs
 open env
 open error
 open hashtable
+open temp
+open trans
 open types
 
 infixr 0 $;
@@ -18,25 +20,25 @@ type Venv = (string, EnvEntry) HashT
 val base_tenv : Tenv = htFromList [("int", TInt), ("string", TString)]
 
 val base_venv : Venv = htFromList
-  [("print", Func{level=(), label=(),
+  [("print", Func{level=outermost, label="print",
           formals=[TString], result=TUnit, extern=true}),
-  ("flush", Func{level=(), label=(),
+  ("flush", Func{level=outermost, label="flush",
           formals=[], result=TUnit, extern=true}),
-  ("getchar", Func{level=(), label=(),
+  ("getchar", Func{level=outermost, label="getstr",
           formals=[], result=TString, extern=true}),
-  ("ord", Func{level=(), label=(),
+  ("ord", Func{level=outermost, label="ord",
           formals=[TString], result=TInt, extern=true}),
-  ("chr", Func{level=(), label=(),
+  ("chr", Func{level=outermost, label="chr",
           formals=[TInt], result=TString, extern=true}),
-  ("size", Func{level=(), label=(),
+  ("size", Func{level=outermost, label="size",
           formals=[TString], result=TInt, extern=true}),
-  ("substring", Func{level=(), label=(),
+  ("substring", Func{level=outermost, label="substring",
           formals=[TString, TInt, TInt], result=TString, extern=true}),
-  ("concat", Func{level=(), label=(),
+  ("concat", Func{level=outermost, label="concat",
           formals=[TString, TString], result=TString, extern=true}),
-  ("not", Func{level=(), label=(),
+  ("not", Func{level=outermost, label="not",
           formals=[TInt], result=TInt, extern=true}),
-  ("exit", Func{level=(), label=(),
+  ("exit", Func{level=outermost, label="exit",
           formals=[TInt], result=TUnit, extern=true})
   ]
 
@@ -46,12 +48,12 @@ fun typeEq (TRecord _) TNil = true
   | typeEq (TArray (_, u1)) (TArray (_, u2)) = (u1=u2)
   | typeEq a b = (a=b)
 
-fun transExp(venv, tenv) = let
+fun transExp topLevel loopLevel venv tenv = let
   fun trexp(VarExp v) = trvar(v)
-    | trexp(UnitExp _) = {exp=(), ty=TUnit}
-    | trexp(NilExp _) = {exp=(), ty=TNil}
-    | trexp(IntExp(i, _)) = {exp=(), ty=TInt}
-    | trexp(StringExp(s, _)) = {exp=(), ty=TString}
+    | trexp(UnitExp _) = {exp=unitExp(), ty=TUnit}
+    | trexp(NilExp _) = {exp=nilExp(), ty=TNil}
+    | trexp(IntExp(i, _)) = {exp=intExp i, ty=TInt}
+    | trexp(StringExp(s, _)) = {exp=stringExp s, ty=TString}
     | trexp(CallExp({func, args}, ln)) =
       let
         val {formals, result, level, label, extern} =
@@ -69,27 +71,36 @@ fun transExp(venv, tenv) = let
               else raiseError ln "type error in function's params."
         val _ = comp (targs, formals)
       in
-        {exp=(), ty=result}
+        {exp=callExp topLevel label extern (typeEq result TUnit) level
+                     (List.map #exp targs), ty=result}
       end
     | trexp(OpExp({left, oper, right}, ln)) =
       let
-        fun getOpExp oper expl expr = case oper of
-            EqOp     => ()
-          | NeqOp    => ()
-          | PlusOp   => ()
-          | MinusOp  => ()
-          | TimesOp  => ()
-          | DivideOp => ()
-          | LtOp     => ()
-          | LeOp     => ()
-          | GtOp     => ()
-          | GeOp     => ()
+        fun getEqExp ty = if typeEq ty TString
+             then binOpStrExp
+             else binOpIntRelExp
+        val getArithExp = binOpIntExp
+        fun getCmpExp ty = if typeEq ty TString
+             then binOpStrExp
+             else binOpIntRelExp
+        fun getOpExp ty = case oper of
+            EqOp     => getEqExp ty
+          | NeqOp    => getEqExp ty
+          | PlusOp   => getArithExp
+          | MinusOp  => getArithExp
+          | TimesOp  => getArithExp
+          | DivideOp => getArithExp
+          | LtOp     => getCmpExp ty
+          | LeOp     => getCmpExp ty
+          | GtOp     => getCmpExp ty
+          | GeOp     => getCmpExp ty
+
         fun checkEqType tyl tyr = typeEq tyl tyr andalso
               not (tyl = TNil andalso tyr = TNil) andalso tyl <> TUnit
         fun checkArithType tyl tyr = typeEq tyl tyr andalso typeEq tyl TInt
         fun checkCmpType tyl tyr = typeEq tyl tyr andalso
               (typeEq tyl TInt orelse typeEq tyl TString)
-        fun checkOpType oper = case oper of
+        val checkOpType = case oper of
             EqOp     => checkEqType
           | NeqOp    => checkEqType
           | PlusOp   => checkArithType
@@ -103,9 +114,9 @@ fun transExp(venv, tenv) = let
         val {exp=expl, ty=tyl} = trexp left
         val {exp=expr, ty=tyr} = trexp right
       in
-        if not $ checkOpType oper tyl tyr
+        if not $ checkOpType tyl tyr
          then raiseError ln "types are not appropriate for operator."
-         else {exp=getOpExp oper expl expr, ty=TInt}
+         else {exp=getOpExp tyl oper expl expr, ty=TInt}
       end
     | trexp(RecordExp({fields, typ}, ln)) =
       let
@@ -131,9 +142,9 @@ fun transExp(venv, tenv) = let
                                   else raiseError ln $ "type error on field "^sy
               | _  => raiseError ln "unknown or duplicated field."
 
-        val _ = verify cs tfields
+        val lfields = verify cs tfields
       in
-        {exp=(), ty=tyr}
+        {exp=recordExp lfields, ty=tyr}
       end
     | trexp(SeqExp(s, ln)) =
       let
@@ -141,7 +152,7 @@ fun transExp(venv, tenv) = let
         val exprs = map #exp lexti
         val {ty=typ, ...} = List.last lexti
       in
-        {exp=(), ty=typ}
+        {exp=seqExp exprs, ty=typ}
       end
     | trexp(AssignExp({var=v, exp}, ln)) =
       let
@@ -155,17 +166,20 @@ fun transExp(venv, tenv) = let
           | _           => ()
       in
         if typeEq tvar texp
-          then {exp=(), ty=TUnit}
+          then {exp=assignExp eVar eValue, ty=TUnit}
           else raiseError ln "type mismatch in assignment."
       end
     | trexp(IfExp({test, then', else'=SOME else'}, ln)) =
       let
-        val {exp=testexp, ty=tytest} = trexp test
-        val {exp=thenexp, ty=tythen} = trexp then'
-        val {exp=elseexp, ty=tyelse} = trexp else'
+        val {exp=exptest, ty=tytest} = trexp test
+        val {exp=expthen, ty=tythen} = trexp then'
+        val {exp=expelse, ty=tyelse} = trexp else'
+        fun trexpIf TUnit = ifThenElseExpUnit
+          | trexpIf _ = ifThenElseExp
+        val ifExp = trexpIf tythen {test=exptest, then'=expthen, else'=expelse}
       in
         if typeEq tytest TInt andalso typeEq tythen tyelse
-          then {exp=(), ty=tythen}
+          then {exp=ifExp, ty=tythen}
           else raiseError ln "type error on if expression."
       end
     | trexp(IfExp({test, then', else'=NONE}, ln)) =
@@ -174,20 +188,21 @@ fun transExp(venv, tenv) = let
         val {exp=expthen, ty=tythen} = trexp then'
       in
         if typeEq tytest TInt andalso tythen=TUnit
-          then {exp=(), ty=TUnit}
+          then {exp=ifThenExp {test=exptest, then'=expthen}, ty=TUnit}
           else raiseError ln "type error on if expression."
       end
     | trexp(WhileExp({test, body}, ln)) =
       let
         val {ty=tytest, exp=etest} = trexp test
-        val {ty=tybody, exp=ebody} = trexp body
-        val wExp = if not $ typeEq tytest TInt
+        val loopLev = newLoopLevel()
+        val {ty=tybody, exp=ebody} = transExp topLevel loopLev venv tenv body
+        val expWhile = if not $ typeEq tytest TInt
           then raiseError ln "type error in while condition."
           else if not $ typeEq tybody TUnit
             then raiseError ln "type error in while's block (must be Unit)."
-            else ()
+            else whileExp {test=etest, body=ebody, lev=topLevel, looplvl=loopLev}
       in
-        {exp=wExp, ty=TUnit}
+        {exp=expWhile, ty=TUnit}
       end
     | trexp(ForExp({var, escape, lo, hi, body}, ln)) =
       let
@@ -196,13 +211,18 @@ fun transExp(venv, tenv) = let
         val _ = if not (typeEq tylo TInt andalso typeEq tyhi TInt)
                   then raiseError ln "for's bounds must be integers."
                   else ()
-        val venv' = htRInsert venv var $ VIntro {access=(), level=()}
-        val {ty=tbody, exp=ebody} = transExp (venv',tenv) body
+        val acc = allocLocal topLevel (!escape)
+        val venv' = htRInsert venv var $
+            VIntro {access=acc, depth=getDepth topLevel}
+        val expVar = simpleVar (getDepth topLevel) acc (getDepth topLevel)
+        val loopLev = newLoopLevel()
+        val {ty=tbody, exp=ebody} = transExp topLevel loopLev venv' tenv body
         val _ = if tbody <> TUnit
                   then raiseError ln "type error in for's block (must be Unit)."
                   else ()
+        val expFor = forExp {var=expVar,lo=elo,hi=ehi,body=ebody,looplvl=loopLev}
       in
-        {exp=(), ty=TUnit}
+        {exp=expFor, ty=TUnit}
       end
     | trexp(LetExp({decs, body}, _)) =
       let
@@ -213,11 +233,13 @@ fun transExp(venv, tenv) = let
             (vv, tt, exps1@exps2)
           end
         val (venv', tenv', expdecs) = List.foldl aux (venv, tenv, []) decs
-        val {exp=expbody,ty=tybody} = transExp (venv', tenv') body
+        val {exp=expbody, ty=tybody} =
+            transExp topLevel loopLevel venv' tenv' body
       in
-        {exp=(), ty=tybody}
+        {exp=seqExp (expdecs@[expbody]), ty=tybody}
       end
-    | trexp(BreakExp ln) = {exp=(), ty=TUnit}
+    | trexp(BreakExp ln) = ({exp=breakExp loopLevel, ty=TUnit}
+        handle breakexc => raiseError ln "Inappropriate break statement.")
     | trexp(ArrayExp({typ, size, init}, ln)) =
       let
         val {ty=typel, exp=expInit} = trexp init
@@ -228,7 +250,7 @@ fun transExp(venv, tenv) = let
       in
         case htSearch tenv typ of
           SOME (TArray (t, u)) => if typeEq typel t
-                then {exp=(), ty=TArray (t,u)}
+                then {exp=arrayExp{size=expSize, init=expInit}, ty=TArray (t,u)}
                 else raiseError ln $ "type mismatch between array's type "
                   ^"and initial value."
         | SOME _ => raiseError ln "must be array type."
@@ -237,12 +259,12 @@ fun transExp(venv, tenv) = let
 
   and trvar(SimpleVar s, ln) =
       let
-        val (tvar,acc,lvl) = case htSearch venv s of
-                SOME (Var {ty,access,level}) => (ty,access,level)
-              | SOME (VIntro {access,level}) => (TInt,access,level)
+        val (tvar, acc, lvl) = case htSearch venv s of
+                SOME (Var {ty, access, depth}) => (ty, access, depth)
+              | SOME (VIntro {access, depth}) => (TInt, access, depth)
               | _ => raiseError ln $ "undeclared variable \""^s^"\""
       in
-        {exp=(), ty=tvar}
+        {exp=simpleVar (getDepth topLevel) acc lvl, ty=tvar}
       end
     | trvar(FieldVar(v, simb), ln) =
       let
@@ -255,7 +277,7 @@ fun transExp(venv, tenv) = let
                          | ((_,ref (SOME t),s)::_) => (t,s)
                          | _ => raiseError ln "shouldn't happen."
       in
-        {exp=(), ty=typ}
+        {exp=fieldVar expVar pos, ty=typ}
       end
     | trvar(SubscriptVar(v, e), ln) =
       let
@@ -268,30 +290,28 @@ fun transExp(venv, tenv) = let
                     TArray (t,_) => t
                   | _ => raiseError ln "type error, array type expected."
       in
-        {exp=(), ty=typ}
+        {exp=subscriptVar eArray eIndex, ty=typ}
       end
 
-  and trdec (venv, tenv) (VarDec ({name,escape,typ=NONE,init},ln)) =
+  and trdec (venv,tenv) (VarDec ({name,escape,typ,init},ln)) =
       let
-        val {ty=t', exp=e'} = transExp (venv,tenv) init
-        val _ = case t' of
-            TNil => raiseError ln $ "type error, type must be explicit when "^
-                      "assigned a Nil expression."
-          | TUnit => raiseError ln "type error, unit type can not be assigned."
-          | _ => ()
+        val {ty=t', exp=e'} = transExp topLevel loopLevel venv tenv init
+        val varTyp = case typ of
+            SOME s => (case htSearch tenv s of
+                         NONE    => raiseError ln $ "unknown type ("^s^")."
+                       | SOME t  => if typeEq t' t then t
+                               else raiseError ln $ "type mismatch between var"^
+                                                    " type and initial value.")
+          | NONE => (case t' of
+                       TNil => raiseError ln $ "type must be explicit when "^
+                                              "assigned a Nil expression."
+                     | TUnit => raiseError ln "unit type can not be assigned."
+                     | _ => t')
+        val acc = allocLocal topLevel (!escape)
+        val e'' = assignExp (varDec acc (getDepth topLevel)) e'
       in
-        (htRInsert venv name $ Var {ty=t',access=(),level=()}, tenv, [])
-      end
-    | trdec (venv,tenv) (VarDec ({name,escape,typ=SOME s,init},ln)) =
-      let
-        val {ty=t', exp=e'} = transExp (venv,tenv) init
-        val varTyp = case htSearch tenv s of
-              SOME t  => if typeEq t' t then t
-                    else raiseError ln $ "type mismatch between var type "
-                                         ^"and initial value."
-            | NONE    => raiseError ln $ "unknown type ("^s^")."
-      in
-        (htRInsert venv name $ Var {ty=varTyp,access=(),level=()}, tenv, [])
+        (htRInsert venv name $ Var {ty=varTyp, access=acc,
+                                    depth=getDepth topLevel}, tenv, [e''])
       end
     | trdec (venv,tenv) (FunctionDec fnList) =
       let
@@ -302,18 +322,22 @@ fun transExp(venv, tenv) = let
         fun check ln s = case htSearch tenv s of
                            NONE => raiseError ln $ "unknown type ("^s^")."
                          | SOME t => t
-        fun addFnToEnv (({name,params,result,body},ln),v) =
+        fun addFnToEnv (({name,params,result,body},ln),(v,ls)) =
               let
                 val typRes = case result of
                                NONE   => TUnit
                              | SOME t => check ln t
                 val typArg = List.map (check ln o #typ) params
+                val lab = newLabel()
+                val lev = newLevel {parent=topLevel
+                      , name=if name = "_tigermain" then "_tigermain" else lab
+                      , formals=true::(List.map (fn x => !(#escape x)) params)}
               in
-                htRInsert v name $ Func {level=(), label=(), formals=typArg,
-                                         result=typRes, extern= false}
+                (htRInsert v name $ Func {level=lev, label=lab, formals=typArg,
+                                          result=typRes, extern=false}, lev::ls)
               end
-        val venv' = List.foldl addFnToEnv venv fnList
-        fun processFn ({name,params,result,body},ln) =
+        val (venv', levels) = List.foldl addFnToEnv (venv,[]) fnList
+        fun processFn (({name,params,result,body},ln),lev) =
               let
                 val _ = List.foldl (fn ({name,...},lst) =>
                   if (List.exists (fn y => name = y) lst)
@@ -325,15 +349,16 @@ fun transExp(venv, tenv) = let
                 val venv'' = List.foldl
                       (fn ({typ,name,escape},v) =>
                          htRInsert v name $ Var {ty=check ln typ
-                                                ,access=()
-                                                ,level=()}) venv' params
-                val {ty, exp=eBody} = transExp(venv'', tenv) body
+                                                ,access=allocLocal lev (!escape)
+                                                ,depth=getDepth topLevel})
+                      venv' params
+                val {ty, exp=eBody} = transExp lev nilLoopLevel venv'' tenv body
               in
                 if typeEq ty typRes
-                  then ()
+                  then functionDec eBody lev (typRes=TUnit)
                   else raiseError ln "Type error in return value."
               end
-        val _ = List.app processFn fnList
+        val _ = List.map processFn (ListPair.zip (fnList,rev levels))
       in
         (venv', tenv, [])
       end
@@ -373,7 +398,7 @@ fun transExp(venv, tenv) = let
                   ([],refs) flds
                 val lst' = Listsort.sort
                              (fn ((a,_),(b,_)) => String.compare(a,b)) lst
-                val _ = List.foldr (fn ((n1,_),n2) => if n1 == n2
+                val _ = List.foldr (fn ((n1,_),n2) => if n1 = n2
                   then raise Error (NONE, "Duplicated field \""^n1^"\".")
                   else n1) "" lst'
                 val (lst'',_) = List.foldl
@@ -404,7 +429,7 @@ fun transProg ex =
     val main = LetExp({decs=[FunctionDec[({name="_tigermain", params=[],
                                            result=SOME "int", body=ex}, 0)]],
                        body=UnitExp 0}, 0)
-    val _ = transExp (base_venv, base_tenv) main
+    val _ = transExp outermost nilLoopLevel base_venv base_tenv main
   in
     ()
   end
