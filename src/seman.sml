@@ -227,11 +227,8 @@ fun transExp topLevel loopLevel venv tenv = let
     | trexp(LetExp({decs, body}, _)) =
       let
         fun aux (d, (v, t, exps1)) =
-          let
-            val (vv, tt, exps2) = trdec (v, t) d
-          in
-            (vv, tt, exps1@exps2)
-          end
+          let val (vv, tt, exps2) = trdec (v, t) d
+          in (vv, tt, exps1@exps2) end
         val (venv', tenv', expdecs) = List.foldl aux (venv, tenv, []) decs
         val {exp=expbody, ty=tybody} =
             transExp topLevel loopLevel venv' tenv' body
