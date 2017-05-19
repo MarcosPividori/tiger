@@ -373,6 +373,9 @@ fun transExp(venv, tenv) = let
                   ([],refs) flds
                 val lst' = Listsort.sort
                              (fn ((a,_),(b,_)) => String.compare(a,b)) lst
+                val _ = List.foldr (fn ((n1,_),n2) => if n1 == n2
+                  then raise Error (NONE, "Duplicated field \""^n1^"\".")
+                  else n1) "" lst'
                 val (lst'',_) = List.foldl
                               (fn ((a,b),(l,n)) => ((a,b,n)::l,n+1)) ([],0) lst'
                 val recordType = TRecord (lst'',ref ())

@@ -1,0 +1,4 @@
+/* EXPECTED: "Error" */
+let type A = {a: int, a:string}
+in 0
+end
