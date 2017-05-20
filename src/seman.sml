@@ -76,47 +76,38 @@ fun transExp topLevel loopLevel venv tenv = let
       end
     | trexp(OpExp({left, oper, right}, ln)) =
       let
-        fun getEqExp ty = if typeEq ty TString
+        val {exp=expl, ty=tyl} = trexp left
+        val {exp=expr, ty=tyr} = trexp right
+
+        val getEqExp = if typeEq tyl TString
              then binOpStrExp
              else binOpIntRelExp
         val getArithExp = binOpIntExp
-        fun getCmpExp ty = if typeEq ty TString
+        val getCmpExp = if typeEq tyl TString
              then binOpStrExp
              else binOpIntRelExp
-        fun getOpExp ty = case oper of
-            EqOp     => getEqExp ty
-          | NeqOp    => getEqExp ty
-          | PlusOp   => getArithExp
-          | MinusOp  => getArithExp
-          | TimesOp  => getArithExp
-          | DivideOp => getArithExp
-          | LtOp     => getCmpExp ty
-          | LeOp     => getCmpExp ty
-          | GtOp     => getCmpExp ty
-          | GeOp     => getCmpExp ty
 
         fun checkEqType tyl tyr = typeEq tyl tyr andalso
               not (tyl = TNil andalso tyr = TNil) andalso tyl <> TUnit
         fun checkArithType tyl tyr = typeEq tyl tyr andalso typeEq tyl TInt
         fun checkCmpType tyl tyr = typeEq tyl tyr andalso
               (typeEq tyl TInt orelse typeEq tyl TString)
-        val checkOpType = case oper of
-            EqOp     => checkEqType
-          | NeqOp    => checkEqType
-          | PlusOp   => checkArithType
-          | MinusOp  => checkArithType
-          | TimesOp  => checkArithType
-          | DivideOp => checkArithType
-          | LtOp     => checkCmpType
-          | LeOp     => checkCmpType
-          | GtOp     => checkCmpType
-          | GeOp     => checkCmpType
-        val {exp=expl, ty=tyl} = trexp left
-        val {exp=expr, ty=tyr} = trexp right
+
+        val (checkOpType, getOpExp)  = case oper of
+            EqOp     => (checkEqType, getEqExp)
+          | NeqOp    => (checkEqType, getEqExp)
+          | PlusOp   => (checkArithType, getArithExp)
+          | MinusOp  => (checkArithType, getArithExp)
+          | TimesOp  => (checkArithType, getArithExp)
+          | DivideOp => (checkArithType, getArithExp)
+          | LtOp     => (checkCmpType, getCmpExp)
+          | LeOp     => (checkCmpType, getCmpExp)
+          | GtOp     => (checkCmpType, getCmpExp)
+          | GeOp     => (checkCmpType, getCmpExp)
       in
         if not $ checkOpType tyl tyr
          then raiseError ln "types are not appropriate for operator."
-         else {exp=getOpExp tyl oper expl expr, ty=TInt}
+         else {exp=getOpExp oper expl expr, ty=TInt}
       end
     | trexp(RecordExp({fields, typ}, ln)) =
       let
