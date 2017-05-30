@@ -203,7 +203,7 @@ local
       end
 in
 
-fun canonize e = (traceSchedule o basicBlocks o linearize) e
+fun canonize (e: stm) : stm list = (traceSchedule o basicBlocks o linearize) e
 
 end
 end
