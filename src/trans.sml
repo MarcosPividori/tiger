@@ -194,7 +194,7 @@ fun recordExp l =
       val l' = Listsort.sort(fn ((_,_,m),(_,_,n)) => Int.compare(m, n)) lexps
       val lexps2 = map #2 l'
     in
-      Ex $ ESEQ (seq $ lexps1 @ [ EXP $ externalCall("_makeRecord",
+      Ex $ ESEQ (seq $ lexps1 @ [ EXP $ externalCall("_allocRecord",
                                                      CONST (length l)::lexps2)
                                 , MOVE (TEMP ret, TEMP rv)],
                  TEMP ret)
@@ -311,7 +311,7 @@ fun arrayExp {size, init} =
       val s = unEx size
       val i = unEx init
     in
-      Ex $ externalCall("allocArray", [s, i])
+      Ex $ externalCall("_allocArray", [s, i])
     end
 
 
@@ -330,7 +330,8 @@ fun fieldVar var p =
       val record = unEx var
       val pos = CONST p
     in
-      Ex $ MEM $ BINOP (PLUS, record, BINOP (MUL, pos, CONST frame.wSz))
+      Ex $ ESEQ (EXP $ externalCall("_checkNil", [record]),
+                 MEM $ BINOP (PLUS, record, BINOP (MUL, pos, CONST frame.wSz)))
     end
 
 fun subscriptVar arr ind =
@@ -342,7 +343,7 @@ fun subscriptVar arr ind =
     in
       Ex $ ESEQ (seq [MOVE (TEMP ra, a),
                       MOVE (TEMP ri, i),
-                      EXP $ externalCall("_checkindex", [TEMP ra, TEMP ri])],
+                      EXP $ externalCall("_checkIndex", [TEMP ra, TEMP ri])],
                  MEM $ BINOP (PLUS, TEMP ra,
                               BINOP (MUL, TEMP ri, CONST frame.wSz)))
     end
