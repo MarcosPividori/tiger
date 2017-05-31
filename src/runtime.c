@@ -1,9 +1,10 @@
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 typedef struct {
-  long length;
+  int32_t length;
   unsigned char chars[1];
 } String;
 
@@ -55,42 +56,42 @@ const String consts[256] = {
 
 const String empty = {0, ""};
 
-long* _allocArray(long size, long init) {
+int32_t* _allocArray(int32_t size, int32_t init) {
   int i;
-  long* a = malloc((size + 1) * sizeof(long));
+  int32_t* a = malloc((size + 1) * sizeof(int32_t));
 	a[0] = size;
   for (i = 1; i <= size; ++i)
 		a[i] = init;
   return a + 1;
 }
 
-void _checkIndex(long* a, long i) {
+void _checkIndex(int32_t* a, int32_t i) {
 	if (i < 0 || i >= a[-1]) {
-		fprintf(stderr, "index %ld out of range!\n", i);
+		fprintf(stderr, "index %d out of range!\n", i);
 		exit(-1);
 	}
 }
 
-long* _allocRecord(long ctos, ...) {
+int32_t* _allocRecord(int32_t ctos, ...) {
   int i;
-  long *p, *a;
+  int32_t *p, *a;
 	va_list va;
-  p = a = malloc(ctos * sizeof(long));
+  p = a = malloc(ctos * sizeof(int32_t));
 	va_start(va, ctos);
   for (i = 0; i < ctos; ++i)
-		*p++ = va_arg(va, long);
+		*p++ = va_arg(va, int32_t);
   va_end(va);
   return a;
 }
 
-void _checkNil(long* r) {
+void _checkNil(int32_t* r) {
 	if (r == 0) {
 		fprintf(stderr, "Nil!\n");
 		exit(-1);
 	}
 }
 
-long _stringCompare(String* s, String* t) {
+int32_t _stringCompare(String* s, String* t) {
   int i;
   if (s == t)
 		return 0;
@@ -111,34 +112,34 @@ void flush() {
   fflush(stdout);
 }
 
-long ord(String* s) {
+int32_t ord(String* s) {
   if (s->length == 0)
 		return -1;
   else
 		return s->chars[0];
 }
 
-String* chr(long i) {
+String* chr(int32_t i) {
   if (i < 0 || i >= 256) {
-		fprintf(stderr, "chr(%ld) out of range\n", i);
+		fprintf(stderr, "chr(%d) out of range\n", i);
 		exit(-1);
   }
   return (String*)(consts + i);
 }
 
-long size(String* s) {
+int32_t size(String* s) {
   return s->length;
 }
 
-String* substring(String* s, long first, long n) {
+String* substring(String* s, int32_t first, int32_t n) {
   if (first < 0 || first + n > s->length) {
-		printf("substring([%ld], %ld, %ld) out of range\n", s->length, first, n);
+		printf("substring([%d], %d, %d) out of range\n", s->length, first, n);
 		exit(1);
   }
   if (n == 1)
 		return (String*)(consts + s->chars[first]);
   {
-		String* t = malloc(sizeof(long) + n);
+		String* t = malloc(sizeof(int32_t) + n);
 		int i;
 		t->length = n;
 		for (i = 0; i < n; ++i)
@@ -154,7 +155,7 @@ String* concat(String* a, String* b) {
 		return a;
   else {
 		int i, n = a->length + b->length;
-		String* t = malloc(sizeof(long) + n);
+		String* t = malloc(sizeof(int32_t) + n);
 		t->length = n;
 		for (i = 0; i < a->length; ++i)
 		  t->chars[i] = a->chars[i];
@@ -164,7 +165,7 @@ String* concat(String* a, String* b) {
   }
 }
 
-long not(long i) {
+int32_t not(int32_t i) {
   return !i;
 }
 
