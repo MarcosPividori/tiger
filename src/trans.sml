@@ -134,7 +134,7 @@ fun callExp ({depth=actDepth, ...}:level) name external isproc
             | Ex (TEMP te) => prepArgs t ((TEMP te)::rt, re)
             | _        => let val temp = TEMP (newTemp())
           in prepArgs t (temp::rt, MOVE (temp, unEx h)::re) end
-      val (ta, la') = prepArgs (ls) ([], [])
+      val (ta, la') = prepArgs ls ([], [])
       val ta' = if external
             then rev ta
             else fpLev::(rev ta)
