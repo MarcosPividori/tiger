@@ -1,30 +1,34 @@
 structure frame :> frame = struct
 (*
-  Frames for 80386 (no displays - registers):
+  Frames for x64:
+   + Pass as many parameters as will fit in registers, in the order:
+       rdi, rsi, rdx, rcx, r8, r9. (max 6 params in registers)
+   + Additional parameters are pushed on the stack, and are removed by the
+       caller after the call.
 
-    |    argn    |  fp+4*(n+1)
+    |    argn    |  fp+8*(n-4)
     |    ...     |
-    |    arg2    |  fp+16
-    |    arg1    |  fp+12
-    |  fp level  |  fp+8
-    |  retorno   |  fp+4
+    |    arg8    |  fp+32
+    |    arg7    |  fp+24
+    |  fp level  |  fp+16
+    |  retorno   |  fp+8
     |   fp ant   |  fp
     --------------  fp
-    |   local1   |  fp-4
-    |   local2   |  fp-8
+    |   local1   |  fp-8
+    |   local2   |  fp-16
     |    ...     |
-    |   localn   |  fp-4*n
+    |   localn   |  fp-8*n
 *)
 
 open tree
 
-val fp = "efp"            (* frame pointer register *)
-val sp = "esp"            (* stack pointer register *)
-val rv = "eax"            (* return value register *)
-val ov = "edx"            (* overflow value register (edx en el 386) *)
+val fp = "rbp"            (* frame pointer register *)
+val sp = "rsp"            (* stack pointer register *)
+val rv = "rax"            (* return value register *)
+val ov = "rdx"            (* overflow value register (edx en el 386) *)
 
-val wSz = 4               (* word size in bytes *)
-val log2WSz = 2           (* base two logarithm of word size in bytes *)
+val wSz = 8               (* word size in bytes *)
+val log2WSz = 3           (* base two logarithm of word size in bytes *)
 val fpPrev = 0            (* offset (bytes) for prev fp *)
 val fpPrevLev = 2 * wSz   (* offset (bytes) for the static link *)
 
@@ -36,9 +40,12 @@ val localsInitial = 0     (* initial number of locals *)
 val localsOffInitial = ~1 (* offset for the first local, in words *)
 
 val specialregs = [rv, fp, sp] (* special purpose registers *)
-val argregs = []               (* registers for passing first args *)
-val callersaves = []       (* registers that must be preserved by the caller *)
-val calleesaves = []       (* registers that must be preserved by the callee *)
+val argregs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+              (* registers for passing first args *)
+val callersaves = ["rdi", "rsi", "rdx", "rcx", "r8", "r9", "r10", "r11"]
+                  (* registers that must be preserved by the caller *)
+val calleesaves = ["rbp", "rsp", "rbx", "r12", "r13", "r14", "r15"]
+                  (* registers that must be preserved by the callee *)
 val calldefs = [rv] @ callersaves (* registers possibly written by the callee *)
 
 type frame = {
