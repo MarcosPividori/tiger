@@ -319,7 +319,7 @@ fun transExp topLevel loopLevel venv tenv = let
                 val lab = newLabel()
                 val lev = newLevel {parent=topLevel
                       , name=if name = "_tigermain" then "_tigermain" else lab
-                      , formals=true::(List.map (fn x => !(#escape x)) params)}
+                      , formals=List.map (fn x => !(#escape x)) params}
               in
                 (htRInsert v name $ Func {level=lev, label=lab, formals=typArg,
                                           result=typRes, extern=false}, lev::ls)
@@ -336,9 +336,9 @@ fun transExp topLevel loopLevel venv tenv = let
                              | SOME t => check ln t
                 val venv'' = List.foldl
                       (fn ({typ,name,escape},v) =>
-                         htRInsert v name $ Var {ty=check ln typ
-                                                ,access=allocLocal lev (!escape)
-                                                ,depth=getDepth topLevel})
+                         htRInsert v name $ Var {ty=check ln typ,
+                                                 access=allocArg lev (!escape),
+                                                 depth=getDepth topLevel})
                       venv' params
                 val {ty, exp=eBody} = transExp lev nilLoopLevel venv'' tenv body
               in
