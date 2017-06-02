@@ -21,7 +21,9 @@ fun codegen frame (stm: stm) : instr list =
             emit $ AOPER {assem=assem, src=src, dst=dst, jump=NONE}
     fun emitJmp assem labels =
             emit $ AOPER {assem=assem, src=[], dst=[], jump=SOME labels}
-    (* munchArgs: Tree.exp list -> Temp.temp list *)
+    (* munchArgs: Tree.exp list -> Temp.temp list
+     * Push all the argument to the registers and the stack according to the
+     * calling convention. *)
     fun munchArgs args = let
           fun munchArgsReg [] _ = []
             | munchArgsReg xs [] = munchArgsStack (rev xs)
@@ -44,7 +46,8 @@ fun codegen frame (stm: stm) : instr list =
                 in munchArgsStack xs end
         in munchArgsReg args argregs end
 
-    (* munchStm: Tree.stm -> unit *)
+    (* munchStm: Tree.stm -> unit
+     * Emits assembly to execute the given statement. *)
       (* move to temporary. *)
     and munchStm (MOVE (TEMP t1, e)) = (case e of
             MEM (BINOP (PLUS, CONST i, e1)) =>
@@ -71,7 +74,7 @@ fun codegen frame (stm: stm) : instr list =
           | _ => emitOper "movq 's0, ('s1)" [munchExp e2, munchExp e1] [])
 
       | munchStm (MOVE (e1, e2)) =
-          raise Fail "Invalid move to no temporary nor mem location!"
+          raise Fail "Invalid move to no temporary nor mem location."
 
       (* function call. *)
       | munchStm (EXP (CALL (NAME n, args))) =
@@ -98,7 +101,7 @@ fun codegen frame (stm: stm) : instr list =
             | GT => emitJmp ("jg "^l1) [l1,l2]
             | LE => emitJmp ("jle "^l1) [l1,l2]
             | GE => emitJmp ("jge "^l1) [l1,l2]
-            | _ => raise Fail "Operator not supported!"
+            | _ => raise Fail "Relational operator not supported."
          end
 
       (* SEQ shouldn't appear after canonization. *)
@@ -106,7 +109,9 @@ fun codegen frame (stm: stm) : instr list =
 
       | munchStm (LABEL l) = emit $ ALABEL {assem=l^":", lab=l}
 
-    (* munchExp: Tree.exp -> Temp.temp *)
+    (* munchExp: Tree.exp -> Temp.temp
+     * Emits assembly to evaluate the expression and returns the register where
+     * the result is saved. *)
     and munchExp (CONST n) = withTmp (fn r => munchStm $ MOVE (TEMP r, CONST n))
       | munchExp (TEMP t) = t
       | munchExp (BINOP (PLUS, e1, e2)) = withTmp (fn r =>
@@ -164,7 +169,7 @@ fun codegen frame (stm: stm) : instr list =
            | _ => emitOper "idivq 's2" [rax, rdx, munchExp e1] [rax, rdx];
           munchStm $ MOVE (TEMP r, TEMP rax)))
 
-      | munchExp (BINOP _) = raise Fail "Operator not supported!"
+      | munchExp (BINOP _) = raise Fail "Binary operator not supported."
 
       | munchExp (MEM e) = withTmp (fn r => munchStm $ MOVE (TEMP r, MEM e))
       | munchExp (CALL _) = raise Fail "CALL shouldn't appear after canon."

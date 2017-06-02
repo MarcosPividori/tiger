@@ -26,6 +26,8 @@ val fp = "rbp"            (* frame pointer register *)
 val sp = "rsp"            (* stack pointer register *)
 val rv = "rax"            (* return value register *)
 val ov = "rdx"            (* overflow value register (edx en el 386) *)
+val rax = "rax"
+val rdx = "rdx"
 
 val wSz = 8               (* word size in bytes *)
 val log2WSz = 3           (* base two logarithm of word size in bytes *)
@@ -47,8 +49,6 @@ val callersaves = ["rdi", "rsi", "rdx", "rcx", "r8", "r9", "r10", "r11"]
 val calleesaves = ["rbp", "rsp", "rbx", "r12", "r13", "r14", "r15"]
                   (* registers that must be preserved by the callee *)
 val calldefs = [rv] @ callersaves (* registers possibly written by the callee *)
-val rax = "rax"
-val rdx = "rdx"
 
 type frame = {
   name: string,

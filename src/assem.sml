@@ -16,8 +16,8 @@ datatype instr = AOPER of {assem: string,
 
 fun format (f: temp -> string) (i:instr) : string =
     case i of
-        AOPER {assem, src, dst, jump} => assem ^ "\n"
-      | ALABEL {assem, lab} => assem ^ "\n"
-      | AMOVE {assem, src, dst} => assem ^ "\n"
+        AOPER {assem, ...} => assem ^ "\n"
+      | ALABEL {assem, ...} => assem ^ "\n"
+      | AMOVE {assem, ...} => assem ^ "\n"
 
 end
