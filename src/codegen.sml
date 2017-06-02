@@ -34,15 +34,15 @@ fun codegen frame (stm: stm) : instr list =
           and munchArgsStack [] = []
             | munchArgsStack (x::xs) =
                 let val _ = case x of
-                    CONST i => emitOper ("pushq $"^(st i)) [] [sp]
-                  | NAME n => emitOper ("pushq "^n) [] [sp]
-                  | TEMP t => emitOper "pushq 's0" [t] [sp]
+                    CONST i => emitOper ("pushq $"^(st i)) [] [SP]
+                  | NAME n => emitOper ("pushq "^n) [] [SP]
+                  | TEMP t => emitOper "pushq 's0" [t] [SP]
                   (* Shouldn't happen because of the definition of callExp. *)
-                  | MEM (TEMP t) => emitOper "pushq ('s0)" [t] [sp]
+                  | MEM (TEMP t) => emitOper "pushq ('s0)" [t] [SP]
                   | MEM (BINOP (PLUS, e, CONST c)) =>
-                        emitOper ("pushq "^(st c)^"('s0)") [munchExp e] [sp]
-                  | MEM e => emitOper "pushq ('s0)" [munchExp e] [sp]
-                  | _ => emitOper "pushq 's0" [munchExp x] [sp]
+                        emitOper ("pushq "^(st c)^"('s0)") [munchExp e] [SP]
+                  | MEM e => emitOper "pushq ('s0)" [munchExp e] [SP]
+                  | _ => emitOper "pushq 's0" [munchExp x] [SP]
                 in munchArgsStack xs end
         in munchArgsReg args argregs end
 
@@ -81,7 +81,7 @@ fun codegen frame (stm: stm) : instr list =
           let val _ = emitOper ("call "^n) (munchArgs args) calldefs
             val diff = length args - length argregs
           in if diff > 0
-               then emitOper ("addq $"^(st diff)^", 'd0") [] [sp]
+               then emitOper ("addq $"^(st diff)^", 'd0") [] [SP]
                else ()
           end
       | munchStm (EXP (CALL _)) = raise Fail "Invalid call with no label."
@@ -141,33 +141,33 @@ fun codegen frame (stm: stm) : instr list =
            | _ => emitOper "subq 's1, 'd0" [r, munchExp e2] [r]))
 
       | munchExp (BINOP (MUL, e1, e2)) = withTmp (fn r =>
-          (munchStm $ MOVE (TEMP rax, e2);
+          (munchStm $ MOVE (TEMP RAX, e2);
            case e1 of
-             CONST i => emitOper ("imulq $"^(st i)^", 's0") [rax] [rax, rdx]
-           | TEMP t => emitOper "imulq 's1, 's0" [rax, t] [rax, rdx]
-           | MEM (TEMP t) => emitOper "imulq ('s1), 's0" [rax, t] [rax, rdx]
+             CONST i => emitOper ("imulq $"^(st i)^", 's0") [RAX] [RAX, RDX]
+           | TEMP t => emitOper "imulq 's1, 's0" [RAX, t] [RAX, RDX]
+           | MEM (TEMP t) => emitOper "imulq ('s1), 's0" [RAX, t] [RAX, RDX]
            | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emitOper ("imulq "^(st i)^"('s1), 's0") [rax, t] [rax, rdx]
+                 emitOper ("imulq "^(st i)^"('s1), 's0") [RAX, t] [RAX, RDX]
            | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emitOper ("imulq "^(st i)^"('s1), 's0") [rax, t] [rax, rdx]
-           | MEM e => emitOper "imulq ('s1), 's0" [rax, munchExp e] [rax, rdx]
-           | _ => emitOper "imulq 's1, 's0" [rax, munchExp e1] [rax, rdx];
-          munchStm $ MOVE (TEMP r, TEMP rax)))
+                 emitOper ("imulq "^(st i)^"('s1), 's0") [RAX, t] [RAX, RDX]
+           | MEM e => emitOper "imulq ('s1), 's0" [RAX, munchExp e] [RAX, RDX]
+           | _ => emitOper "imulq 's1, 's0" [RAX, munchExp e1] [RAX, RDX];
+          munchStm $ MOVE (TEMP r, TEMP RAX)))
 
       | munchExp (BINOP (DIV, e1, e2)) = withTmp (fn r =>
-          (munchStm $ MOVE (TEMP rax, e1);
-           emitOper "cdq" [rax] [rdx];
+          (munchStm $ MOVE (TEMP RAX, e1);
+           emitOper "cdq" [RAX] [RDX];
            case e1 of
-             CONST i => emitOper ("idivq $"^(st i)) [rax, rdx] [rax, rdx]
-           | TEMP t => emitOper "idivq 's2" [rax, rdx, t] [rax, rdx]
-           | MEM (TEMP t) => emitOper "idivq ('s2)" [rax, rdx, t] [rax, rdx]
+             CONST i => emitOper ("idivq $"^(st i)) [RAX, RDX] [RAX, RDX]
+           | TEMP t => emitOper "idivq 's2" [RAX, RDX, t] [RAX, RDX]
+           | MEM (TEMP t) => emitOper "idivq ('s2)" [RAX, RDX, t] [RAX, RDX]
            | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emitOper ("idivq "^(st i)^"('s2)") [rax, rdx, t] [rax, rdx]
+                 emitOper ("idivq "^(st i)^"('s2)") [RAX, RDX, t] [RAX, RDX]
            | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emitOper ("idivq "^(st i)^"('s2)") [rax, rdx, t] [rax, rdx]
-           | MEM e => emitOper "idivq ('s2)" [rax, rdx, munchExp e] [rax, rdx]
-           | _ => emitOper "idivq 's2" [rax, rdx, munchExp e1] [rax, rdx];
-          munchStm $ MOVE (TEMP r, TEMP rax)))
+                 emitOper ("idivq "^(st i)^"('s2)") [RAX, RDX, t] [RAX, RDX]
+           | MEM e => emitOper "idivq ('s2)" [RAX, RDX, munchExp e] [RAX, RDX]
+           | _ => emitOper "idivq 's2" [RAX, RDX, munchExp e1] [RAX, RDX];
+          munchStm $ MOVE (TEMP r, TEMP RAX)))
 
       | munchExp (BINOP _) = raise Fail "Binary operator not supported."
 

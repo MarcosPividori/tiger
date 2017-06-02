@@ -120,13 +120,13 @@ fun stringExp (s:string) =
 fun callExp ({depth=actDepth, ...}:level) name external isproc
             ({depth, ...}:level) ls =
     let
-      fun getSL 0 = TEMP fp
-        | getSL n = MEM $ BINOP (PLUS, CONST fpPrevLev, getSL (n-1))
+      fun getSL 0 = TEMP FP
+        | getSL n = MEM $ BINOP (PLUS, CONST FpPrevLev, getSL (n-1))
       val fpLev = if depth = actDepth
-              then MEM $ BINOP (PLUS, CONST fpPrevLev, TEMP fp)
+              then MEM $ BINOP (PLUS, CONST FpPrevLev, TEMP FP)
               else if depth < actDepth
                then getSL (actDepth - depth + 1)
-               else TEMP fp
+               else TEMP FP
       fun prepArgs []     (rt, re) = (rt, re)
         | prepArgs (h::t) (rt, re) = case h of
               Ex (CONST s) => prepArgs t ((CONST s)::rt, re)
@@ -143,7 +143,7 @@ fun callExp ({depth=actDepth, ...}:level) name external isproc
         then Nx (seq (la' @ [EXP $ CALL (NAME name, ta')]))
         else let val temp = TEMP (newTemp())
              in Ex $ ESEQ (seq $ la'@ [ EXP $ CALL (NAME name, ta'),
-                                        MOVE (temp, TEMP rv)], temp)
+                                        MOVE (temp, TEMP RV)], temp)
              end
     end
 
@@ -196,7 +196,7 @@ fun recordExp l =
     in
       Ex $ ESEQ (seq $ lexps1 @ [ EXP $ externalCall("_allocRecord",
                                                      CONST (length l)::lexps2)
-                                , MOVE (TEMP ret, TEMP rv)],
+                                , MOVE (TEMP ret, TEMP RV)],
                  TEMP ret)
     end
 
@@ -318,8 +318,8 @@ fun arrayExp {size, init} =
 (* Translate access to variables *)
 fun simpleVar actDepth (InFrame offset) depth =
     let
-      fun followSL 0 = TEMP fp
-        | followSL n = MEM (BINOP (PLUS, CONST fpPrevLev, followSL (n-1)))
+      fun followSL 0 = TEMP FP
+        | followSL n = MEM (BINOP (PLUS, CONST FpPrevLev, followSL (n-1)))
     in
       Ex $ MEM $ BINOP (PLUS, CONST offset, followSL (actDepth-depth))
     end
@@ -331,7 +331,7 @@ fun fieldVar var p =
       val pos = CONST p
     in
       Ex $ ESEQ (EXP $ externalCall("_checkNil", [record]),
-                 MEM $ BINOP (PLUS, record, BINOP (MUL, pos, CONST frame.wSz)))
+                 MEM $ BINOP (PLUS, record, BINOP (MUL, pos, CONST WSize)))
     end
 
 fun subscriptVar arr ind =
@@ -345,7 +345,7 @@ fun subscriptVar arr ind =
                       MOVE (TEMP ri, i),
                       EXP $ externalCall("_checkIndex", [TEMP ra, TEMP ri])],
                  MEM $ BINOP (PLUS, TEMP ra,
-                              BINOP (MUL, TEMP ri, CONST frame.wSz)))
+                              BINOP (MUL, TEMP ri, CONST WSize)))
     end
 
 
@@ -355,7 +355,7 @@ fun varDec acc actDepth = simpleVar actDepth acc actDepth
 fun functionDec e lev proc =
     let val body =
          if proc then unNx e
-         else MOVE (TEMP rv, unEx e)
+         else MOVE (TEMP RV, unEx e)
       val () = procEntryExit lev $ Nx body
     in Ex (CONST 0) end
 

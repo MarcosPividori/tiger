@@ -3,19 +3,17 @@ sig
 
 type frame
 
-val fp : temp.temp
-val sp : temp.temp
-val rv : temp.temp
-val ov : temp.temp
-val rax : temp.temp
-val rdx : temp.temp
+val FP : temp.temp
+val SP : temp.temp
+val RV : temp.temp
+val RAX : temp.temp
+val RDX : temp.temp
 
 datatype access = InFrame of int | InReg of temp.label
 
-val wSz : int
-val log2WSz : int
-val fpPrev : int
-val fpPrevLev : int
+val WSize : int
+val FpPrev : int
+val FpPrevLev : int
 
 val argregs : temp.temp list
 val calldefs : temp.temp list

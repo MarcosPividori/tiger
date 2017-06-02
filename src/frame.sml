@@ -22,33 +22,32 @@ structure frame :> frame = struct
 
 open tree
 
-val fp = "rbp"            (* frame pointer register *)
-val sp = "rsp"            (* stack pointer register *)
-val rv = "rax"            (* return value register *)
-val ov = "rdx"            (* overflow value register (edx en el 386) *)
-val rax = "rax"
-val rdx = "rdx"
+val FP = "rbp"            (* frame pointer register *)
+val SP = "rsp"            (* stack pointer register *)
+val RV = "rax"            (* return value register *)
+val RAX = "rax"
+val RDX = "rdx"
 
-val wSz = 8               (* word size in bytes *)
-val log2WSz = 3           (* base two logarithm of word size in bytes *)
-val fpPrev = 0            (* offset (bytes) for prev fp *)
-val fpPrevLev = 2 * wSz   (* offset (bytes) for the static link *)
+val WSize = 8               (* word size in bytes *)
+val FpPrev = 0            (* offset (bytes) for prev fp *)
+val FpPrevLev = 2 * WSize   (* offset (bytes) for the static link *)
 
 val argsInitial = 0       (* number of args by default *)
 val argsOffInitial = 3    (* offset for the first arg, in words *)
-val argsGap = wSz         (* number of bytes for each arg *)
+val argsGap = WSize         (* number of bytes for each arg *)
 val regInitial = 1        (* initial value for reg counter *)
 val localsInitial = 0     (* initial number of locals *)
 val localsOffInitial = ~1 (* offset for the first local, in words *)
 
-val specialregs = [rv, fp, sp] (* special purpose registers *)
+val specialregs = [RV, FP, SP] (* special purpose registers *)
 val argregs = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
               (* registers for passing first args *)
-val callersaves = ["rdi", "rsi", "rdx", "rcx", "r8", "r9", "r10", "r11"]
+val callersaves = ["r10", "r11"]
                   (* registers that must be preserved by the caller *)
-val calleesaves = ["rbp", "rsp", "rbx", "r12", "r13", "r14", "r15"]
+val calleesaves = ["rbx", "r12", "r13", "r14", "r15"]
                   (* registers that must be preserved by the callee *)
-val calldefs = [rv] @ callersaves (* registers possibly written by the callee *)
+val calldefs = [RV] @ argregs @ callersaves
+               (* registers possibly written by the callee *)
 
 type frame = {
   name: string,
@@ -82,18 +81,18 @@ fun formals ({formals=f, ...}: frame) =
 fun maxRegFrame ({actualReg, ...}: frame) = !actualReg
 
 fun allocArg ({actualArg, ...}: frame) true =
-      let val ret = (!actualArg+argsOffInitial) * wSz
+      let val ret = (!actualArg+argsOffInitial) * WSize
         val _ = actualArg := !actualArg+1
       in InFrame ret end
   | allocArg _ false = InReg (temp.newTemp())
 
 fun allocLocal ({actualLocal, ...}: frame) true =
-      let val ret = (!actualLocal+localsOffInitial) * wSz
+      let val ret = (!actualLocal+localsOffInitial) * WSize
         val _ = actualLocal := (!actualLocal-1)
       in InFrame ret end
   | allocLocal _ false = InReg (temp.newTemp())
 
-fun exp (InFrame k) _ = MEM (BINOP (PLUS, TEMP fp, CONST k))
+fun exp (InFrame k) _ = MEM (BINOP (PLUS, TEMP FP, CONST k))
   | exp (InReg l) _ = TEMP l
 
 fun externalCall (s, l) = CALL (NAME s, l)
