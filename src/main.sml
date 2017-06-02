@@ -1,9 +1,11 @@
-open lexer
-open parser
+open canon
+open codegen
 open error
 open escape
+open lexer
+open parser
 open seman
-open BasicIO Nonstdio
+open List BasicIO Nonstdio
 
 fun errParsing lbuf = raiseError (!numLine)
   ("when parsing: " ^ (Lexing.getLexeme lbuf))
@@ -14,7 +16,7 @@ fun lexStream(is: instream) =
 fun main args =
   let
     fun arg l s =
-      (List.exists (fn x => x = s) l, List.filter (fn x => x <> s) l)
+      (exists (fn x => x = s) l, filter (fn x => x <> s) l)
     val (arbol, l1)   = arg args "-arbol"
     val (escapes, l2) = arg l1 "-escapes"
     val (ir, l3)      = arg l2 "-ir"
@@ -34,14 +36,13 @@ fun main args =
       val _ = findEscape expr
       val _ = transProg expr
       val intermList = trans.getResult()
-(*      val (procLst, stringLst, _) = List.foldr
-            (fn (frag, (lP, lS, st)) => case frag of
-                  frame.PROC {body, frame} => ((canonize body, frame)::lP,lS,st)
-                | frame.STRING (l, s)      => if l=""
-                   then (lP, lS, String.extract(s, 8, NONE))
-                   else (lP, (l, st)::lS, ""))
-               ([],[],"")
-               intermList *)
+      val assemList = foldr op@ [] (foldr
+            (fn (frag, lst) => case frag of
+                  frame.PROC {body, frame} =>
+                      map (codegen frame) (canonize body) @ lst
+                | _ => lst)
+            [] intermList)
+      val _ = app print (map (assem.format (fn n => n)) assemList)
     in
       printStderr "Successful compilation\n"
     end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg
