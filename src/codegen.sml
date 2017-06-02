@@ -17,6 +17,10 @@ in
 fun codegen frame (stm: stm) : instr list =
   let val ilist = ref (nil: instr list)
     fun emit x = ilist := x :: !ilist
+    fun emitOper assem src dst =
+            emit $ AOPER {assem=assem, src=src, dst=dst, jump=NONE}
+    fun emitJmp assem labels =
+            emit $ AOPER {assem=assem, src=[], dst=[], jump=SOME labels}
     (* munchArgs: Tree.exp list -> Temp.temp list *)
     fun munchArgs args = let
           fun munchArgsReg [] _ = []
@@ -28,78 +32,53 @@ fun codegen frame (stm: stm) : instr list =
           and munchArgsStack [] = []
             | munchArgsStack (x::xs) =
                 let val _ = case x of
-                    CONST i => emit $ AOPER {assem="pushq $"^(st i),
-                                             src=[], dst=[sp], jump=NONE}
-                  | NAME n => emit $ AOPER {assem="pushq "^n,
-                                            src=[], dst=[sp], jump=NONE}
-                  | TEMP t => emit $ AOPER {assem="pushq 's0",
-                                            src=[t], dst=[sp], jump=NONE}
+                    CONST i => emitOper ("pushq $"^(st i)) [] [sp]
+                  | NAME n => emitOper ("pushq "^n) [] [sp]
+                  | TEMP t => emitOper "pushq 's0" [t] [sp]
                   (* Shouldn't happen because of the definition of callExp. *)
-                  | MEM (TEMP t) => emit $ AOPER {assem="pushq ('s0)",
-                                                  src=[t], dst=[sp], jump=NONE}
+                  | MEM (TEMP t) => emitOper "pushq ('s0)" [t] [sp]
                   | MEM (BINOP (PLUS, e, CONST c)) =>
-                        emit $ AOPER {assem="pushq "^(st c)^"('s0)",
-                                      src=[munchExp e], dst=[sp], jump=NONE}
-                  | MEM e => emit $ AOPER {assem="pushq ('s0)",
-                                          src=[munchExp e], dst=[sp], jump=NONE}
-                  | _ => emit $ AOPER {assem="pushq 's0",
-                                       src=[munchExp x], dst=[sp], jump=NONE}
+                        emitOper ("pushq "^(st c)^"('s0)") [munchExp e] [sp]
+                  | MEM e => emitOper "pushq ('s0)" [munchExp e] [sp]
+                  | _ => emitOper "pushq 's0" [munchExp x] [sp]
                 in munchArgsStack xs end
         in munchArgsReg args argregs end
 
     (* munchStm: Tree.stm -> unit *)
       (* move to temporary. *)
-    and munchStm (MOVE (TEMP t1, MEM (BINOP (PLUS, CONST i, e)))) =
-          emit $ AOPER {assem="movq "^(st i)^"('s0), 'd0",
-                        src=[munchExp e], dst=[t1], jump=NONE}
-      | munchStm (MOVE (TEMP t1, MEM (BINOP (PLUS, e, CONST i)))) =
-          munchStm $ MOVE (TEMP t1, MEM $ BINOP (PLUS, CONST i, e))
-
-      | munchStm (MOVE (TEMP t1, MEM e)) =
-          emit $ AOPER {assem="movq ('s0), 'd0",
-                        src=[munchExp e], dst=[t1], jump=NONE}
-
-      | munchStm (MOVE (TEMP t1, NAME l)) =
-          emit $ AOPER {assem="movq $"^l^", 'd0",
-                        src=[], dst=[t1], jump=NONE}
-
-      | munchStm (MOVE (TEMP t1, CONST i)) =
-          emit $ AOPER {assem="movq $"^(st i)^", 'd0",
-                        src=[], dst=[t1], jump=NONE}
-
-      | munchStm (MOVE (TEMP t1, e)) =
-          emit $ AMOVE {assem="movq 's0, 'd0", src=munchExp e, dst=t1}
+    and munchStm (MOVE (TEMP t1, e)) = (case e of
+            MEM (BINOP (PLUS, CONST i, e1)) =>
+               emitOper ("movq "^(st i)^"('s0), 'd0") [munchExp e1] [t1]
+          | MEM (BINOP (PLUS, e1, CONST i)) =>
+               emitOper ("movq "^(st i)^"('s0), 'd0") [munchExp e1] [t1]
+          | MEM e1 => emitOper "movq ('s0), 'd0" [munchExp e1] [t1]
+          | NAME l => emitOper ("movq $"^l^", 'd0") [] [t1]
+          | CONST i => emitOper ("movq $"^(st i)^", 'd0") [] [t1]
+          | _ => emit $ AMOVE {assem="movq 's0, 'd0", src=munchExp e, dst=t1})
 
       (* move to mem location. *)
-      | munchStm (MOVE (MEM (BINOP (PLUS, CONST i, e1)), e2)) =
-          (case e2 of
-            NAME l => emit $ AOPER {assem="movq $"^l^", "^(st i)^"('s0)",
-                                    src=[munchExp e1], dst=[], jump=NONE}
-          | CONST j => emit $ AOPER{assem="movq $"^(st j)^", "^(st i)^"('s0)",
-                                    src=[munchExp e1], dst=[], jump=NONE}
-          | _ => emit $ AOPER{assem="movq 's0, "^(st i)^"('s1)",
-                             src=[munchExp e2, munchExp e1], dst=[], jump=NONE})
-      | munchStm (MOVE (MEM (BINOP (PLUS, e1, CONST i)), e2)) =
-          munchStm $ MOVE (MEM $ BINOP (PLUS, CONST i, e1), e2)
-
-      | munchStm (MOVE (MEM e1, e2)) =
-          (case e2 of
-            CONST i => emit $ AOPER {assem="movq $"^(st i)^", ('s0)",
-                                     src=[munchExp e1], dst=[], jump=NONE}
-          | _ => emit $ AOPER {assem="movq 's0, ('s1)",
-                             src=[munchExp e2, munchExp e1], dst=[], jump=NONE})
+      | munchStm (MOVE (MEM e1, e2)) = (case (e1, e2) of
+            (BINOP (PLUS, CONST i, e), NAME l) =>
+                emitOper ("movq $"^l^", "^(st i)^"('s0)") [munchExp e] []
+          | (BINOP (PLUS, CONST i, e), CONST j) =>
+                emitOper ("movq $"^(st j)^", "^(st i)^"('s0)") [munchExp e] []
+          | (BINOP (PLUS, CONST i, e), _) =>
+             emitOper ("movq 's0, "^(st i)^"('s1)") [munchExp e2, munchExp e] []
+          | (BINOP (PLUS, e, CONST i), _) =>
+                munchStm $ MOVE (MEM $ BINOP (PLUS, CONST i, e), e2)
+          | (_, CONST i) =>
+                emitOper ("movq $"^(st i)^", ('s0)") [munchExp e1] []
+          | _ => emitOper "movq 's0, ('s1)" [munchExp e2, munchExp e1] [])
 
       | munchStm (MOVE (e1, e2)) =
           raise Fail "Invalid move to no temporary nor mem location!"
 
       (* function call. *)
       | munchStm (EXP (CALL (NAME n, args))) =
-          let val _ = emit $ AOPER {assem="call "^n, src=munchArgs args,
-                                    dst=calldefs, jump=NONE}
+          let val _ = emitOper ("call "^n) (munchArgs args) calldefs
             val diff = length args - length argregs
           in if diff > 0
-               then emit $ AOPER {assem="addq $"^(st diff)^", 'd0",
-                                  src=[], dst=[sp], jump=NONE}
+               then emitOper ("addq $"^(st diff)^", 'd0") [] [sp]
                else ()
           end
       | munchStm (EXP (CALL _)) = raise Fail "Invalid call with no label."
@@ -107,25 +86,23 @@ fun codegen frame (stm: stm) : instr list =
       | munchStm (EXP e) = (munchExp e; ())
 
       (* jumps. *)
-      | munchStm (JUMP (NAME n, lst)) =
-          emit $ AOPER {assem="jmp "^n, src=[], dst=[], jump=SOME lst}
+      | munchStm (JUMP (NAME n, lst)) = emitJmp ("jmp "^n) lst
       | munchStm (JUMP _) = raise Fail "Invalid jmp to no label."
 
       | munchStm (CJUMP (oper, e1, e2, l1, l2)) =
-         let val _ = emit $ AOPER {assem="cmpq 's1 's0",
-                              src=[munchExp e1, munchExp e2], dst=[], jump=NONE}
+         let val _ = emitOper "cmpq 's1 's0" [munchExp e1, munchExp e2] []
          in case oper of
-            EQ => emit $ AOPER {assem="je "^l1,src=[],dst=[],jump=SOME [l1,l2]}
-          | NE => emit $ AOPER {assem="jne "^l1,src=[],dst=[],jump=SOME [l1,l2]}
-          | LT => emit $ AOPER {assem="jl "^l1,src=[],dst=[],jump=SOME [l1,l2]}
-          | GT => emit $ AOPER {assem="jg "^l1,src=[],dst=[],jump=SOME [l1,l2]}
-          | LE => emit $ AOPER {assem="jle "^l1,src=[],dst=[],jump=SOME [l1,l2]}
-          | GE => emit $ AOPER {assem="jge "^l1,src=[],dst=[],jump=SOME [l1,l2]}
-          | _ => raise Fail "Operator not supported!"
+              EQ => emitJmp ("je "^l1) [l1,l2]
+            | NE => emitJmp ("jne "^l1) [l1,l2]
+            | LT => emitJmp ("jl "^l1) [l1,l2]
+            | GT => emitJmp ("jg "^l1) [l1,l2]
+            | LE => emitJmp ("jle "^l1) [l1,l2]
+            | GE => emitJmp ("jge "^l1) [l1,l2]
+            | _ => raise Fail "Operator not supported!"
          end
 
+      (* SEQ shouldn't appear after canonization. *)
       | munchStm (SEQ (e1, e2)) = (munchStm e1; munchStm e2)
-                                  (* shouldn't happen after canonization.*)
 
       | munchStm (LABEL l) = emit $ ALABEL {assem=l^":", lab=l}
 
@@ -135,84 +112,56 @@ fun codegen frame (stm: stm) : instr list =
       | munchExp (BINOP (PLUS, e1, e2)) = withTmp (fn r =>
           (munchStm $ MOVE (TEMP r, e2);
            case e1 of
-             CONST i => emit $ AOPER {assem="addq $"^(st i)^", 'd0",
-                                      src=[r], dst=[r], jump=NONE}
-           | TEMP t => emit $ AOPER {assem="addq 's1, 'd0",
-                                     src=[r, t], dst=[r], jump=NONE}
-           | MEM (TEMP t) => emit $ AOPER {assem="addq ('s1), 'd0",
-                                           src=[r, t], dst=[r], jump=NONE}
+             CONST i => emitOper ("addq $"^(st i)^", 'd0") [r] [r]
+           | TEMP t => emitOper "addq 's1, 'd0" [r, t] [r]
+           | MEM (TEMP t) => emitOper "addq ('s1), 'd0" [r, t] [r]
            | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emit $ AOPER {assem="addq "^(st i)^"('s1), 'd0",
-                               src=[r, t], dst=[r], jump=NONE}
+                 emitOper ("addq "^(st i)^"('s1), 'd0") [r, t] [r]
            | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emit $ AOPER {assem="addq "^(st i)^"('s1), 'd0",
-                               src=[r, t], dst=[r], jump=NONE}
-           | MEM e => emit $ AOPER {assem="addq ('s1), 'd0",
-                                    src=[r, munchExp e], dst=[r], jump=NONE}
-           | _ => emit $ AOPER {assem="addq 's1, 'd0",
-                                src=[r, munchExp e1], dst=[r], jump=NONE}))
+                 emitOper ("addq "^(st i)^"('s1), 'd0") [r, t] [r]
+           | MEM e => emitOper "addq ('s1), 'd0" [r, munchExp e] [r]
+           | _ => emitOper "addq 's1, 'd0" [r, munchExp e1] [r]))
 
       | munchExp (BINOP (MINUS, e1, e2)) = withTmp (fn r =>
           (munchStm $ MOVE (TEMP r, e1);
            case e2 of
-             CONST i => emit $ AOPER {assem="subq $"^(st i)^", 'd0",
-                                      src=[r], dst=[r], jump=NONE}
-           | TEMP t => emit $ AOPER {assem="subq 's1, 'd0",
-                                     src=[r, t], dst=[r], jump=NONE}
-           | MEM (TEMP t) => emit $ AOPER {assem="subq ('s1), 'd0",
-                                           src=[r, t], dst=[r], jump=NONE}
+             CONST i => emitOper ("subq $"^(st i)^", 'd0") [r] [r]
+           | TEMP t => emitOper "subq 's1, 'd0" [r, t] [r]
+           | MEM (TEMP t) => emitOper "subq ('s1), 'd0" [r, t] [r]
            | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emit $ AOPER {assem="subq "^(st i)^"('s1), 'd0",
-                               src=[r, t], dst=[r], jump=NONE}
+                 emitOper ("subq "^(st i)^"('s1), 'd0") [r, t] [r]
            | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emit $ AOPER {assem="subq "^(st i)^"('s1), 'd0",
-                               src=[r, t], dst=[r], jump=NONE}
-           | MEM e => emit $ AOPER {assem="subq ('s1), 'd0",
-                                    src=[r, munchExp e], dst=[r], jump=NONE}
-           | _ => emit $ AOPER {assem="subq 's1, 'd0",
-                                src=[r, munchExp e2], dst=[r], jump=NONE}))
+                 emitOper ("subq "^(st i)^"('s1), 'd0") [r, t] [r]
+           | MEM e => emitOper "subq ('s1), 'd0" [r, munchExp e] [r]
+           | _ => emitOper "subq 's1, 'd0" [r, munchExp e2] [r]))
 
       | munchExp (BINOP (MUL, e1, e2)) = withTmp (fn r =>
           (munchStm $ MOVE (TEMP rax, e2);
            case e1 of
-             CONST i => emit $ AOPER {assem="imulq $"^(st i)^", 's0",
-                                      src=[rax], dst=[rax, rdx], jump=NONE}
-           | TEMP t => emit $ AOPER {assem="imulq 's1, 's0",
-                                     src=[rax, t], dst=[rax, rdx], jump=NONE}
-           | MEM (TEMP t) => emit $ AOPER {assem="imulq ('s1), 's0",
-                                        src=[rax, t], dst=[rax, rdx], jump=NONE}
+             CONST i => emitOper ("imulq $"^(st i)^", 's0") [rax] [rax, rdx]
+           | TEMP t => emitOper "imulq 's1, 's0" [rax, t] [rax, rdx]
+           | MEM (TEMP t) => emitOper "imulq ('s1), 's0" [rax, t] [rax, rdx]
            | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emit $ AOPER {assem="imulq "^(st i)^"('s1), 's0",
-                               src=[rax, t], dst=[rax, rdx], jump=NONE}
+                 emitOper ("imulq "^(st i)^"('s1), 's0") [rax, t] [rax, rdx]
            | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emit $ AOPER {assem="imulq "^(st i)^"('s1), 's0",
-                               src=[rax, t], dst=[rax, rdx], jump=NONE}
-           | MEM e => emit $ AOPER {assem="imulq ('s1), 's0",
-                               src=[rax, munchExp e], dst=[rax, rdx], jump=NONE}
-           | _ => emit $ AOPER {assem="imulq 's1, 's0",
-                            src=[rax, munchExp e1], dst=[rax, rdx], jump=NONE};
+                 emitOper ("imulq "^(st i)^"('s1), 's0") [rax, t] [rax, rdx]
+           | MEM e => emitOper "imulq ('s1), 's0" [rax, munchExp e] [rax, rdx]
+           | _ => emitOper "imulq 's1, 's0" [rax, munchExp e1] [rax, rdx];
           munchStm $ MOVE (TEMP r, TEMP rax)))
 
       | munchExp (BINOP (DIV, e1, e2)) = withTmp (fn r =>
           (munchStm $ MOVE (TEMP rax, e1);
-           emit $ AOPER {assem="cdq", src=[rax], dst=[rdx], jump=NONE};
+           emitOper "cdq" [rax] [rdx];
            case e1 of
-             CONST i => emit $ AOPER {assem="idivq $"^(st i),
-                                      src=[rax, rdx], dst=[rax, rdx], jump=NONE}
-           | TEMP t => emit $ AOPER {assem="idivq 's2",
-                                   src=[rax, rdx, t], dst=[rax, rdx], jump=NONE}
-           | MEM (TEMP t) => emit $ AOPER {assem="idivq ('s2)",
-                                   src=[rax, rdx, t], dst=[rax, rdx], jump=NONE}
+             CONST i => emitOper ("idivq $"^(st i)) [rax, rdx] [rax, rdx]
+           | TEMP t => emitOper "idivq 's2" [rax, rdx, t] [rax, rdx]
+           | MEM (TEMP t) => emitOper "idivq ('s2)" [rax, rdx, t] [rax, rdx]
            | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emit $ AOPER {assem="idivq "^(st i)^"('s2)",
-                               src=[rax, rdx, t], dst=[rax, rdx], jump=NONE}
+                 emitOper ("idivq "^(st i)^"('s2)") [rax, rdx, t] [rax, rdx]
            | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emit $ AOPER {assem="idivq "^(st i)^"('s2)",
-                               src=[rax, rdx, t], dst=[rax, rdx], jump=NONE}
-           | MEM e => emit $ AOPER {assem="idivq ('s2)",
-                          src=[rax, rdx, munchExp e], dst=[rax, rdx], jump=NONE}
-           | _ => emit $ AOPER {assem="idivq 's2",
-                       src=[rax, rdx, munchExp e1], dst=[rax, rdx], jump=NONE};
+                 emitOper ("idivq "^(st i)^"('s2)") [rax, rdx, t] [rax, rdx]
+           | MEM e => emitOper "idivq ('s2)" [rax, rdx, munchExp e] [rax, rdx]
+           | _ => emitOper "idivq 's2" [rax, rdx, munchExp e1] [rax, rdx];
           munchStm $ MOVE (TEMP r, TEMP rax)))
 
       | munchExp (BINOP _) = raise Fail "Operator not supported!"
