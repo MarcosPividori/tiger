@@ -25,10 +25,17 @@ val formals : frame -> access list
 
 val allocLocal : frame -> bool -> access
 
-val exp : access -> tree.exp -> tree.exp
+val exp : access -> tree.exp
 val externalCall : string * tree.exp list -> tree.exp
 
 datatype frag = PROC of {body: tree.stm, frame: frame}
               | STRING of temp.label * string
+
+val procEntryExit1 : frame * tree.stm -> tree.stm
+
+val procEntryExit2 : frame * assem.instr list -> assem.instr list
+
+val procEntryExit3 : frame * assem.instr list ->
+      {prolog: string, body: assem.instr list, epilog: string}
 
 end

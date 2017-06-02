@@ -83,9 +83,33 @@ fun name ({name, ...}: frame) = name
 
 fun formals ({formals, ...}: frame) = formals
 
-fun exp (InFrame k) _ = MEM (BINOP (PLUS, TEMP FP, CONST k))
-  | exp (InReg l) _ = TEMP l
+fun exp (InFrame k) = MEM (BINOP (PLUS, TEMP FP, CONST k))
+  | exp (InReg l) = TEMP l
 
-fun externalCall (s, l) = CALL (NAME s, l)
+fun externalCall (s, l) = ESEQ (EXP (CALL (NAME s, l)), TEMP RV)
 
+(* Add statements to save the escaping arguments and save/restore callee save *)
+fun procEntryExit1 ({formals, ...}: frame, body) = let
+    fun seq [] = EXP (CONST 0)
+      | seq [s] = s
+      | seq (x::xs) = SEQ (x, seq xs)
+    fun moveArgToStack ((InFrame k)::params) (reg::regs) =
+          (MOVE (exp (InFrame k), TEMP reg)) :: (moveArgToStack params regs)
+      | moveArgToStack (_::params) (_::regs) = moveArgToStack params regs
+      | moveArgToStack _ _ = []
+  in seq ((moveArgToStack formals argregs) @ [body])
+     (* TODO: incomplete, need to save/restore callee saves *)
+  end
+
+(* ... *)
+fun procEntryExit2 (frame, body) = body @
+     [assem.AOPER {assem="", src=[SP, FP, RV] @ calleesaves, dst=[], jump=NONE}]
+
+(* Add instructions to update the SP according to the frame size before and
+ * after the function's body *)
+fun procEntryExit3 ({name, ...}: frame, body) =
+      {prolog = "PROCEDURE " ^ name ^ "\n",
+       body = body,
+       epilog = "END " ^ name ^ "\n"}
+      (* TODO: incomplete *)
 end

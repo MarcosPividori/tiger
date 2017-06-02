@@ -355,7 +355,7 @@ fun functionDec e lev proc =
     let val body =
          if proc then unNx e
          else MOVE (TEMP RV, unEx e)
-      val () = procEntryExit lev $ Nx body
+      val _ = procEntryExit lev $ Nx body
     in Ex (CONST 0) end
 
 end
