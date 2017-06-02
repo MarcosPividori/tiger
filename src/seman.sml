@@ -335,18 +335,18 @@ fun transExp topLevel loopLevel venv tenv = let
                                NONE   => TUnit
                              | SOME t => check ln t
                 val venv'' = List.foldl
-                      (fn ({typ,name,escape},v) =>
+                      (fn (({typ,name,escape},acc),v) =>
                          htRInsert v name $ Var {ty=check ln typ,
-                                                 access=allocArg lev (!escape),
+                                                 access=acc,
                                                  depth=getDepth topLevel})
-                      venv' params
+                      venv' $ ListPair.zip (params, formals lev)
                 val {ty, exp=eBody} = transExp lev nilLoopLevel venv'' tenv body
               in
                 if typeEq ty typRes
                   then functionDec eBody lev (typRes=TUnit)
                   else raiseError ln "Type error in return value."
               end
-        val _ = List.map processFn (ListPair.zip (fnList,rev levels))
+        val _ = List.map processFn $ ListPair.zip (fnList,rev levels)
       in
         (venv', tenv, [])
       end

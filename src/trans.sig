@@ -8,7 +8,6 @@ val getDepth : level -> int
 val outermost : level
 val newLevel : {parent: level, name: temp.label, formals: bool list} -> level
 val formals : level -> access list
-val allocArg : level -> bool -> access
 val allocLocal : level -> bool -> access
 
 type exp

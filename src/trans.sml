@@ -27,16 +27,15 @@ val outermost: level = {
 
 fun newLevel {parent = {frame, depth, ...} : level, name, formals} = {
   parent = SOME frame,
-  frame = newFrame {name = name, formals = formals},
+  frame = newFrame {name = name, formals = true :: formals},
+          (* append static link (always escaped) *)
   depth = depth + 1}
 
-
 (* Export some functions from frame module *)
-fun allocArg ({frame, ...}:level) b = frame.allocArg frame b
-
 fun allocLocal ({frame, ...}:level) b = frame.allocLocal frame b
 
-fun formals ({frame, ...}:level) = frame.formals frame
+fun formals ({frame, ...}:level) = tl (frame.formals frame)
+                                   (* remove static link *)
 
 
 (* Main data type for translation into intermediate representation *)

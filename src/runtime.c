@@ -179,5 +179,5 @@ String* getstr() {
 
 int main() {
   int i;
-  return _tigermain(0 /* static link!? */ );
+  return _tigermain(0 /* static link */ );
 }
