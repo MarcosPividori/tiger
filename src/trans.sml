@@ -112,7 +112,7 @@ fun stringLen s =
 fun stringExp (s:string) =
     let val l = newLabel()
       val len = ".quad "^makestring(stringLen s)
-      val str = ".string \""^s^"\""
+      val str = ".ascii \""^s^"\""
       val _ = globData:= (!globData @ [STRING (l, len), STRING ("", str)])
     in Ex (NAME l) end
 
