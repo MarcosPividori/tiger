@@ -32,8 +32,17 @@ fun main args =
       val lexbuf = lexStream entrada
       val expr = prog Token lexbuf handle _ => errParsing lexbuf
       val _ = findEscape expr
+      val _ = transProg expr
+      val intermList = trans.getResult()
+(*      val (procLst, stringLst, _) = List.foldr
+            (fn (frag, (lP, lS, st)) => case frag of
+                  frame.PROC {body, frame} => ((canonize body, frame)::lP,lS,st)
+                | frame.STRING (l, s)      => if l=""
+                   then (lP, lS, String.extract(s, 8, NONE))
+                   else (lP, (l, st)::lS, ""))
+               ([],[],"")
+               intermList *)
     in
-      transProg expr;
       printStderr "Successful compilation\n"
     end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg
   end handle Fail msg => printErrorMsg NONE NONE msg
