@@ -7,6 +7,8 @@ val fp : temp.temp
 val sp : temp.temp
 val rv : temp.temp
 val ov : temp.temp
+val rax : temp.temp
+val rdx : temp.temp
 
 datatype access = InFrame of int | InReg of temp.label
 
@@ -15,6 +17,7 @@ val log2WSz : int
 val fpPrev : int
 val fpPrevLev : int
 
+val argregs : temp.temp list
 val calldefs : temp.temp list
 val callersaves : temp.temp list
 

@@ -47,6 +47,8 @@ val callersaves = ["rdi", "rsi", "rdx", "rcx", "r8", "r9", "r10", "r11"]
 val calleesaves = ["rbp", "rsp", "rbx", "r12", "r13", "r14", "r15"]
                   (* registers that must be preserved by the callee *)
 val calldefs = [rv] @ callersaves (* registers possibly written by the callee *)
+val rax = "rax"
+val rdx = "rdx"
 
 type frame = {
   name: string,
