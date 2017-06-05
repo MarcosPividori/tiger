@@ -5,7 +5,11 @@ open escape
 open lexer
 open parser
 open seman
+open show
 open List BasicIO Nonstdio
+
+infixr 0 $
+fun x $ y = x y
 
 fun errParsing lbuf = raiseError (!numLine)
   ("when parsing: " ^ (Lexing.getLexeme lbuf))
@@ -15,8 +19,8 @@ fun lexStream(is: instream) =
 
 fun main args =
   let
-    fun arg l s =
-      (exists (fn x => x = s) l, filter (fn x => x <> s) l)
+    fun arg l s = (exists (fn x => x = s) l, filter (fn x => x <> s) l)
+    fun iff f code = if f then code else ()
     val (arbol, l1)   = arg args "-arbol"
     val (escapes, l2) = arg l1 "-escapes"
     val (ir, l3)      = arg l2 "-ir"
@@ -26,7 +30,7 @@ fun main args =
     val (inter, l7)   = arg l6 "-inter"
     val (entrada, fileName) =
       case l7 of
-        [n] => ((open_in n, n) handle _ => raise Fail (n ^ " doesn't exist!"))
+        [n] => ((open_in n, n) handle _ => raise Fail $ n ^ " doesn't exist!")
       | []  => (std_in, "stdin")
       | _   => raise Fail "unknown option!"
   in
@@ -36,16 +40,27 @@ fun main args =
       val _ = findEscape expr
       val _ = transProg expr
       val intermList = trans.getResult()
-      val assemList = foldr op@ [] (foldr
-            (fn (frag, lst) => case frag of
-                  frame.PROC {body, frame} =>
-                      map (codegen frame) (canonize body) @ lst
-                | _ => lst)
-            [] intermList)
-      val _ = app print (map (assem.format (fn n => n)) assemList)
+
+      val (procList, stringList) = foldr (fn (frag, (pl, sl)) =>
+              case frag of
+                frame.PROC r => (r :: pl, sl)
+              | frame.STRING p => (pl, p :: sl))
+            ([],[]) intermList
+
+      val assemList = concat $ foldr (fn ({frame, body}, lst) =>
+                                      map (codegen frame) (canonize body) @ lst)
+                               [] procList
+
+      val _ = iff ir $ app (print o showTree o #body) procList
+
+      val _ = iff canon $
+                let val canonList = concat $ map (canonize o #body) procList
+                 in app (print o showTree) canonList end
+
+      val _ = iff code $ app print $ map (assem.format (fn n => n)) assemList
     in
       printStderr "Successful compilation\n"
     end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg
   end handle Fail msg => printErrorMsg NONE NONE msg
 
-val _ = main(CommandLine.arguments())
+val _ = main $ CommandLine.arguments()
