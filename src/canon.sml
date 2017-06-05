@@ -89,14 +89,18 @@ local
             reorder_stm [e] (fn l => JUMP (hd l, labs))
         | do_stm (CJUMP (p, a, b, t, f)) =
             reorder_stm [a, b] (fn l => CJUMP (p, hd l, hd $ tl l, t, f))
-        | do_stm (MOVE (TEMP t, CALL (e, el))) =
+        | do_stm (MOVE (TEMP t, CALL (NAME f, el))) =
+            reorder_stm el (fn l => MOVE (TEMP t, CALL (NAME f, l)))
+        | do_stm (MOVE (TEMP t, CALL (e, el))) = (* never happen for tiger *)
             reorder_stm (e::el) (fn l => MOVE (TEMP t, CALL (hd l, tl l)))
         | do_stm (MOVE (TEMP t, b)) =
             reorder_stm [b] (fn l => MOVE (TEMP t, hd l))
         | do_stm (MOVE (MEM e, b)) =
             reorder_stm [e, b] (fn l => MOVE (MEM $ hd l, hd $ tl l))
         | do_stm (MOVE (ESEQ (s, e), b)) = do_stm $ SEQ (s, MOVE (e, b))
-        | do_stm (EXP (CALL (e, el))) =
+        | do_stm (EXP (CALL (NAME f, el))) =
+            reorder_stm el (fn l => EXP $ CALL (NAME f, l))
+        | do_stm (EXP (CALL (e, el))) = (* never happen for tiger *)
             reorder_stm (e::el) (fn l => EXP $ CALL (hd l, tl l))
         | do_stm (EXP e) = reorder_stm [e] (fn l => EXP $ hd l)
         | do_stm s = reorder_stm [] (fn _ => s)
@@ -109,7 +113,9 @@ local
             let val stms = do_stm s
               val (stms', e) = do_exp e
             in (stms%stms', e) end
-        | do_exp (CALL (e, el)) =
+        | do_exp (CALL (NAME f, el)) =
+            reorder_exp el (fn l => CALL (NAME f, l))
+        | do_exp (CALL (e, el)) = (* never happen for tiger *)
             reorder_exp (e::el) (fn l => CALL (hd l, tl l))
         | do_exp e = reorder_exp [] (fn _ => e)
 
