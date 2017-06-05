@@ -4,8 +4,8 @@ local
   open hashtable
   open tree
 
-  infixr 0 $;
-  fun x $ y = x y;
+  infixr 0 $
+  fun x $ y = x y
 
   (* From an arbitrary Tree statement, produce a list of cleaned trees
    * satisfying the following properties:

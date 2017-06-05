@@ -11,8 +11,8 @@ open temp
 open trans
 open types
 
-infixr 0 $;
-fun x $ y = x y;
+infixr 0 $
+fun x $ y = x y
 
 type Tenv = (string, Type) HashT
 type Venv = (string, EnvEntry) HashT

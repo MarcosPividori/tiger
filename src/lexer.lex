@@ -9,8 +9,8 @@ fun -- r = (r := !r - 1; !r)
 
 val stringToInteger = valOf o Int.fromString
 
-infixr 0 $;
-fun x $ y = x y;
+infixr 0 $
+fun x $ y = x y
 
 fun controlToHexTabNl "\\n" = "\\x0a"
   | controlToHexTabNl "\\t" = "\\x09"

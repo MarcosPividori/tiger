@@ -5,8 +5,8 @@ open tree
 open temp
 open abs
 
-infixr 0 $;
-fun x $ y = x y;
+infixr 0 $
+fun x $ y = x y
 
 exception breakexc
 
