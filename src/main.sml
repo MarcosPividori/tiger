@@ -20,9 +20,8 @@ fun lexStream(is: instream) =
 fun main args =
   let
     fun arg l s = (exists (fn x => x = s) l, filter (fn x => x <> s) l)
-    fun iff f code = if f then code else ()
-    val (arbol, l1)   = arg args "-arbol"
-    val (escapes, l2) = arg l1 "-escapes"
+    val (ast, l1)   = arg args "-ast"
+    val (escapes, l2) = arg l1 "-escape"
     val (ir, l3)      = arg l2 "-ir"
     val (canon, l4)   = arg l3 "-canon"
     val (code, l5)    = arg l4 "-code"
@@ -51,13 +50,16 @@ fun main args =
                                       map (codegen frame) (canonize body) @ lst)
                                [] procList
 
-      val _ = iff ir $ app (print o showTree o #body) procList
+      val _ = if ast then printAst expr else ()
 
-      val _ = iff canon $
+      val _ = if ir then app (print o showTree o #body) procList else ()
+
+      val _ = if canon then
                 let val canonList = concat $ map (canonize o #body) procList
-                 in app (print o showTree) canonList end
+                 in app (print o showTree) canonList end else ()
 
-      val _ = iff code $ app print $ map (assem.format (fn n => n)) assemList
+      val _ = if code then app print $ map (assem.format (fn n => n)) assemList
+                else ()
     in
       printStderr "Successful compilation\n"
     end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg
