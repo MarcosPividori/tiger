@@ -15,6 +15,8 @@ val htInsList : (''a, 'b) HashT -> (''a * 'b) list -> (''a, 'b) HashT
 
 val htRInsert : (''a, 'b) HashT -> ''a -> 'b -> (''a, 'b) HashT
 
+val htRemove  : (''a, 'b) HashT -> ''a -> (''a, 'b) HashT
+
 val htSearch  : (''a, 'b) HashT -> ''a -> 'b option
 
 val htGet     : (''a, 'b) HashT -> ''a -> 'b

@@ -19,6 +19,9 @@ fun htInsList ht lst = let val ht2 = copy ht
 fun htRInsert ht key value = let val ht2 = copy ht
   in (insert ht2 (key, value); ht2) end
 
+fun htRemove ht key = let val ht2 = copy ht
+  in (remove ht2 key handle _ => raise notExists; ht2) end
+
 val htSearch = peek
 
 fun htGet ht key = case htSearch ht key of
