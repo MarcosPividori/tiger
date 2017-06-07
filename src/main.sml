@@ -11,11 +11,11 @@ open List BasicIO Nonstdio
 infixr 0 $
 fun x $ y = x y
 
-fun errParsing lbuf = raiseError (!numLine)
-  ("when parsing: " ^ (Lexing.getLexeme lbuf))
+fun errParsing lbuf = raiseError (!numLine) $
+  "when parsing: " ^ Lexing.getLexeme lbuf
 
 fun lexStream(is: instream) =
-  Lexing.createLexer(fn b => fn n => buff_input is b 0 n)
+  Lexing.createLexer (fn b => fn n => buff_input is b 0 n)
 
 fun main args =
   let
