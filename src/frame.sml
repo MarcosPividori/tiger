@@ -57,6 +57,8 @@ type frame = {
   actualLocal: int ref (* counter of locals in the given frame *)
 }
 
+type register = string
+
 datatype frag = PROC of {body: tree.stm, frame: frame}
               | STRING of temp.label * string
 

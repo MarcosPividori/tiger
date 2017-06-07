@@ -2,6 +2,7 @@ signature frame =
 sig
 
 type frame
+type register
 
 val FP : temp.temp
 val SP : temp.temp
