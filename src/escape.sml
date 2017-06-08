@@ -4,15 +4,15 @@ local
 
 open abs
 open error
-open hashtable
+open dictionary
 
 type depth = int
-type escEnv = (string, depth * bool ref) HashT
+type escEnv = (string, depth * bool ref) Dict
 
 fun travVar env d s nl =
   case s of
     SimpleVar s =>
-      (case htSearch env s of
+      (case dictSearch env s of
          SOME (dd, b) => if d > dd then b:=true else ()
        | NONE => raiseError nl ("Unknown variable '"^s^"'."))
   | FieldVar(v, s) => travVar env d v nl
@@ -37,7 +37,7 @@ and travExp env d s =
   | WhileExp({test, body}, _) =>
       (travExp env d test; travExp env d body)
   | ForExp({var, escape, lo, hi, body}, _) =>
-      let val env' = htRInsert env var (d, escape)
+      let val env' = dictRInsert env var (d, escape)
       in travExp env d lo;
         travExp env d hi;
         travExp env' d body
@@ -54,18 +54,18 @@ and travDecs env d [] = env
         FunctionDec l =>
           let fun aux ({params, body, ...}, _) =
             let fun insertVar (var, e) =
-                  htRInsert e (#name var) (d + 1, #escape var)
+                  dictRInsert e (#name var) (d + 1, #escape var)
                 val env' = foldr insertVar env params
             in travExp env' (d + 1) body end
           in List.app aux l; env end
       | VarDec({name, escape, init, ...}, _) =>
-          (travExp env d init; htRInsert env name (d, escape))
+          (travExp env d init; dictRInsert env name (d, escape))
       | TypeDec _ => env
     in travDecs (aux s) d t end
 
 in
 
-fun findEscape prog = travExp (htNew()) 0 prog
+fun findEscape prog = travExp (dictNew String.compare) 0 prog
 
 end
 end

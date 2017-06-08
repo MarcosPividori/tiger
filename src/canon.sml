@@ -1,7 +1,7 @@
 structure canon =
 struct
 local
-  open hashtable
+  open dictionary
   open tree
 
   infixr 0 $
@@ -161,14 +161,14 @@ local
     | splitLast _ = raise Fail "empty list not expected!"
 
   fun trace table (b as (LABEL lab :: _)) rest =
-        let val table = htRInsert table lab nil
+        let val table = dictRInsert table lab nil
         in case splitLast b of
              (most, JUMP (NAME lab, _)) =>
-               (case htSearch table lab of
+               (case dictSearch table lab of
                   SOME (b' as _::_) => most @ trace table b' rest
                 | _ => b @ getNext table rest)
            | (most, CJUMP (opr, x, y, t, f)) =>
-               (case (htSearch table t, htSearch table f) of
+               (case (dictSearch table t, dictSearch table f) of
                   (_, SOME (b' as _::_)) => b @ trace table b' rest
                 | (SOME (b' as _::_), _) =>
                   most @ [CJUMP (notRel opr, x, y, f, t)]
@@ -185,7 +185,7 @@ local
     | trace _ _ _ = raise Fail "unexpected pattern matching failure!"
 
   and getNext table ((b as (LABEL lab::_))::rest) =
-        (case htSearch table lab of
+        (case dictSearch table lab of
            SOME (_::_) => trace table b rest
          | _ => getNext table rest)
     | getNext _ nil = nil
@@ -202,9 +202,9 @@ local
   fun traceSchedule (blocks, done) =
       let
         (* inserts the given blocks to the hash table indexed by their labels. *)
-        fun enterBlock (b as (LABEL s :: _), table) = htRInsert table s b
+        fun enterBlock (b as (LABEL s :: _), table) = dictRInsert table s b
           | enterBlock (_, table) = table
-        val blocksTable = foldr enterBlock (htNew()) blocks
+        val blocksTable = foldr enterBlock (dictNew String.compare) blocks
       in (getNext blocksTable blocks) @ [LABEL done]
       end
 in

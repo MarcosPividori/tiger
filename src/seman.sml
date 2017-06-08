@@ -6,7 +6,7 @@ local
 open abs
 open env
 open error
-open hashtable
+open dictionary
 open temp
 open trans
 open types
@@ -14,12 +14,13 @@ open types
 infixr 0 $
 fun x $ y = x y
 
-type Tenv = (string, Type) HashT
-type Venv = (string, EnvEntry) HashT
+type Tenv = (string, Type) Dict
+type Venv = (string, EnvEntry) Dict
 
-val base_tenv : Tenv = htFromList [("int", TInt), ("string", TString)]
+val base_tenv : Tenv = dictInsList (dictNew String.compare)
+                                 [("int", TInt), ("string", TString)]
 
-val base_venv : Venv = htFromList
+val base_venv : Venv = dictInsList (dictNew String.compare)
   [("print", Func{level=outermost, label="print",
           formals=[TString], result=TUnit, extern=true}),
   ("flush", Func{level=outermost, label="flush",
@@ -57,7 +58,7 @@ fun transExp topLevel loopLevel venv tenv = let
     | trexp(CallExp({func, args}, ln)) =
       let
         val {formals, result, level, label, extern} =
-          case htSearch venv func of
+          case dictSearch venv func of
             SOME (Func r) => r
           | _   => raiseError ln $ "undeclared function \""^func^"\""
         val targs = List.map trexp args
@@ -113,7 +114,7 @@ fun transExp topLevel loopLevel venv tenv = let
       let
         val tfields = map (fn (sy,ex) => (sy, trexp ex)) fields
 
-        val (tyr, cs) = case htSearch tenv typ of
+        val (tyr, cs) = case dictSearch tenv typ of
             SOME (TRecord (cs, u)) => (TRecord (cs, u), cs)
           | SOME _ => raiseError ln $ typ^" is not a record type."
           | NONE   => raiseError ln $ "unknown type ("^typ^")."
@@ -150,7 +151,7 @@ fun transExp topLevel loopLevel venv tenv = let
         val {ty=tvar, exp=eVar} = trvar (v,ln)
         val {ty=texp, exp=eValue} = trexp exp
         val _ = case v of
-            SimpleVar s => (case htSearch venv s of
+            SimpleVar s => (case dictSearch venv s of
                 SOME (VIntro _) =>
                   raiseError ln "for's indexes are read only."
               | _  => ())
@@ -203,7 +204,7 @@ fun transExp topLevel loopLevel venv tenv = let
                   then raiseError ln "for's bounds must be integers."
                   else ()
         val acc = allocLocal topLevel (!escape)
-        val venv' = htRInsert venv var $
+        val venv' = dictRInsert venv var $
             VIntro {access=acc, depth=getDepth topLevel}
         val expVar = simpleVar (getDepth topLevel) acc (getDepth topLevel)
         val loopLev = newLoopLevel()
@@ -211,7 +212,7 @@ fun transExp topLevel loopLevel venv tenv = let
         val _ = if tbody <> TUnit
                   then raiseError ln "type error in for's block (must be Unit)."
                   else ()
-        val expFor = forExp {var=expVar,lo=elo,hi=ehi,body=ebody,looplvl=loopLev}
+        val expFor = forExp{var=expVar,lo=elo,hi=ehi,body=ebody,looplvl=loopLev}
       in
         {exp=expFor, ty=TUnit}
       end
@@ -236,7 +237,7 @@ fun transExp topLevel loopLevel venv tenv = let
                   then raiseError ln "type error, array's size must be integer."
                   else ()
       in
-        case htSearch tenv typ of
+        case dictSearch tenv typ of
           SOME (TArray (t, u)) => if typeEq typel t
                 then {exp=arrayExp{size=expSize, init=expInit}, ty=TArray (t,u)}
                 else raiseError ln $ "type mismatch between array's type "
@@ -247,7 +248,7 @@ fun transExp topLevel loopLevel venv tenv = let
 
   and trvar(SimpleVar s, ln) =
       let
-        val (tvar, acc, lvl) = case htSearch venv s of
+        val (tvar, acc, lvl) = case dictSearch venv s of
                 SOME (Var {ty, access, depth}) => (ty, access, depth)
               | SOME (VIntro {access, depth}) => (TInt, access, depth)
               | _ => raiseError ln $ "undeclared variable \""^s^"\""
@@ -285,7 +286,7 @@ fun transExp topLevel loopLevel venv tenv = let
       let
         val {ty=t', exp=e'} = transExp topLevel loopLevel venv tenv init
         val varTyp = case typ of
-            SOME s => (case htSearch tenv s of
+            SOME s => (case dictSearch tenv s of
                          NONE    => raiseError ln $ "unknown type ("^s^")."
                        | SOME t  => if typeEq t' t then t
                                else raiseError ln $ "type mismatch between var"^
@@ -298,16 +299,16 @@ fun transExp topLevel loopLevel venv tenv = let
         val acc = allocLocal topLevel (!escape)
         val e'' = assignExp (varDec acc (getDepth topLevel)) e'
       in
-        (htRInsert venv name $ Var {ty=varTyp, access=acc,
+        (dictRInsert venv name $ Var {ty=varTyp, access=acc,
                                     depth=getDepth topLevel}, tenv, [e''])
       end
     | trdec (venv,tenv) (FunctionDec fnList) =
       let
         val _ = List.foldl (fn (({name,...},ln),decs) =>
-          case htSearch decs name of
+          case dictSearch decs name of
             SOME _ => raiseError ln $ "duplicated function definition for "^name
-          | NONE => htInsert decs name ()) (htNew ()) fnList
-        fun check ln s = case htSearch tenv s of
+          | NONE => dictInsert decs name ()) (dictNew String.compare) fnList
+        fun check ln s = case dictSearch tenv s of
                            NONE => raiseError ln $ "unknown type ("^s^")."
                          | SOME t => t
         fun addFnToEnv (({name,params,result,body},ln),(v,ls)) =
@@ -321,8 +322,8 @@ fun transExp topLevel loopLevel venv tenv = let
                       , name=if name = "_tigermain" then "_tigermain" else lab
                       , formals=List.map (fn x => !(#escape x)) params}
               in
-                (htRInsert v name $ Func {level=lev, label=lab, formals=typArg,
-                                          result=typRes, extern=false}, lev::ls)
+                (dictRInsert v name $ Func {level=lev, label=lab, formals=typArg
+                                         ,result=typRes, extern=false}, lev::ls)
               end
         val (venv', levels) = List.foldl addFnToEnv (venv,[]) fnList
         fun processFn (({name,params,result,body},ln),lev) =
@@ -336,7 +337,7 @@ fun transExp topLevel loopLevel venv tenv = let
                              | SOME t => check ln t
                 val venv'' = List.foldl
                       (fn (({typ,name,escape},acc),v) =>
-                         htRInsert v name $ Var {ty=check ln typ,
+                         dictRInsert v name $ Var {ty=check ln typ,
                                                  access=acc,
                                                  depth=getDepth topLevel})
                       venv' $ ListPair.zip (params, formals lev)
@@ -352,10 +353,11 @@ fun transExp topLevel loopLevel venv tenv = let
       end
     | trdec (venv,tenv) (TypeDec ts) =
       let
-        val mapTy = List.foldl (fn (({name,ty},ln),t) => case htSearch t name of
+        val mapTy = List.foldl (fn (({name,ty},ln),t) =>
+            case dictSearch t name of
               SOME _ => raiseError ln $
                 "Duplicated type definition for \""^name^"\""
-            | NONE   => htRInsert t name ty) (htNew ()) ts
+            | NONE   => dictRInsert t name ty) (dictNew String.compare) ts
 
         fun depends [] = []
           | depends ({name,ty=NameTy sym}::xs) = (sym, name)::(depends xs)
@@ -365,23 +367,24 @@ fun transExp topLevel loopLevel venv tenv = let
         val ord = topsort.topsort $ depends $ map #1 ts
 
         val ord' = ord @ (List.filter
-                (fn x => not (List.exists (fn y => x = y) ord)) (htKeys mapTy))
+               (fn x => not (List.exists (fn y => x = y) ord)) (dictKeys mapTy))
 
         fun addType name typ (tenv',refs) = case typ of
-            NameTy sym => let val t = htGet tenv' sym
-                           in (htRInsert tenv' name t,refs) end
-          | ArrayTy sym => let val t = htGet tenv' sym
-                          in (htRInsert tenv' name $ TArray (t, ref()),refs) end
+            NameTy sym => let val t = dictGet tenv' sym
+                           in (dictRInsert tenv' name t,refs) end
+          | ArrayTy sym => let val t = dictGet tenv' sym
+                        in (dictRInsert tenv' name $ TArray (t, ref()),refs) end
           | RecordTy flds => let
                 val _ = List.app (fn ({typ,...}) =>
-                  if htSearch mapTy typ = NONE andalso htSearch tenv typ = NONE
+                  if dictSearch mapTy typ = NONE
+                     andalso dictSearch tenv typ = NONE
                     then raise Error (NONE, "Unknown type \""^typ^"\".")
                     else ()) flds
                 val (lst, refs') = List.foldr
                   (fn ({name,typ,...},(l,r)) =>
-                      case htSearch r typ of
-                        NONE => let val rr = ref (htSearch tenv' typ)
-                                 in ((name, rr)::l, htInsert r typ rr) end
+                      case dictSearch r typ of
+                        NONE => let val rr = ref (dictSearch tenv' typ)
+                                 in ((name, rr)::l, dictInsert r typ rr) end
                       | SOME rr => ((name, rr)::l, r))
                   ([],refs) flds
                 val lst' = Listsort.sort
@@ -392,17 +395,17 @@ fun transExp topLevel loopLevel venv tenv = let
                 val (lst'',_) = List.foldl
                               (fn ((a,b),(l,n)) => ((a,b,n)::l,n+1)) ([],0) lst'
                 val recordType = TRecord (lst'',ref ())
-              in (htRInsert tenv' name recordType,refs') end
+              in (dictRInsert tenv' name recordType,refs') end
 
         val (tenv',refs) = List.foldl
-                (fn (n,(tenv',refs)) => case htSearch mapTy n of
+                (fn (n,(tenv',refs)) => case dictSearch mapTy n of
                       SOME t => addType n t (tenv',refs)
-                    | NONE => (case htSearch tenv n of
+                    | NONE => (case dictSearch tenv n of
                          NONE => raise Error (NONE, "Unknown type \""^n^"\".")
                        | SOME _ => (tenv',refs)))
-                (tenv,htNew ()) ord'
-        val _ = List.app (fn k => (htGet refs k) := htSearch tenv' k)
-                         (htKeys refs)
+                (tenv,dictNew String.compare) ord'
+        val _ = List.app (fn k => (dictGet refs k) := dictSearch tenv' k)
+                         (dictKeys refs)
       in
         (venv, tenv', [])
       end
