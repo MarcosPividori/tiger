@@ -5,7 +5,11 @@ type ('a, 'b) Dict
 
 exception notExists
 
-val dictNew  : ('a * 'a -> order) -> ('a, 'b) Dict
+val dictNew     : ('a * 'a -> order) -> ('a, 'b) Dict
+
+val dictNewStr  : unit -> (string, 'b) Dict
+
+val dictNewInt  : unit -> (int, 'b) Dict
 
 val dictExists  : ('a, 'b) Dict -> 'a -> bool
 

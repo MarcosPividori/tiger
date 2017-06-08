@@ -17,10 +17,10 @@ fun x $ y = x y
 type Tenv = (string, Type) Dict
 type Venv = (string, EnvEntry) Dict
 
-val base_tenv : Tenv = dictInsList (dictNew String.compare)
+val base_tenv : Tenv = dictInsList (dictNewStr())
                                  [("int", TInt), ("string", TString)]
 
-val base_venv : Venv = dictInsList (dictNew String.compare)
+val base_venv : Venv = dictInsList (dictNewStr())
   [("print", Func{level=outermost, label="print",
           formals=[TString], result=TUnit, extern=true}),
   ("flush", Func{level=outermost, label="flush",
@@ -307,7 +307,7 @@ fun transExp topLevel loopLevel venv tenv = let
         val _ = List.foldl (fn (({name,...},ln),decs) =>
           case dictSearch decs name of
             SOME _ => raiseError ln $ "duplicated function definition for "^name
-          | NONE => dictInsert decs name ()) (dictNew String.compare) fnList
+          | NONE => dictInsert decs name ()) (dictNewStr()) fnList
         fun check ln s = case dictSearch tenv s of
                            NONE => raiseError ln $ "unknown type ("^s^")."
                          | SOME t => t
@@ -357,7 +357,7 @@ fun transExp topLevel loopLevel venv tenv = let
             case dictSearch t name of
               SOME _ => raiseError ln $
                 "Duplicated type definition for \""^name^"\""
-            | NONE   => dictRInsert t name ty) (dictNew String.compare) ts
+            | NONE   => dictRInsert t name ty) (dictNewStr()) ts
 
         fun depends [] = []
           | depends ({name,ty=NameTy sym}::xs) = (sym, name)::(depends xs)
@@ -403,7 +403,7 @@ fun transExp topLevel loopLevel venv tenv = let
                     | NONE => (case dictSearch tenv n of
                          NONE => raise Error (NONE, "Unknown type \""^n^"\".")
                        | SOME _ => (tenv',refs)))
-                (tenv,dictNew String.compare) ord'
+                (tenv,dictNewStr()) ord'
         val _ = List.app (fn k => (dictGet refs k) := dictSearch tenv' k)
                          (dictKeys refs)
       in

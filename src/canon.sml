@@ -204,7 +204,7 @@ local
         (* inserts the given blocks to the hash table indexed by their labels. *)
         fun enterBlock (b as (LABEL s :: _), table) = dictRInsert table s b
           | enterBlock (_, table) = table
-        val blocksTable = foldr enterBlock (dictNew String.compare) blocks
+        val blocksTable = foldr enterBlock (dictNewStr()) blocks
       in (getNext blocksTable blocks) @ [LABEL done]
       end
 in

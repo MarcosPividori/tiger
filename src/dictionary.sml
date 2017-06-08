@@ -8,6 +8,10 @@ exception notExists
 
 fun dictNew order = mkDict order
 
+fun dictNewStr () = mkDict String.compare
+
+fun dictNewInt () = mkDict Int.compare
+
 fun dictExists dict key = isSome (peek (dict, key))
 
 fun dictInsert dict key value = if dictExists dict key

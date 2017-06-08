@@ -8,7 +8,7 @@ type 'data GraphTable = (node, 'data) Dict
 
 type edge = node * node
 
-fun newGraphTable () = dictNew Int.compare
+fun newGraphTable () = dictNewInt()
 
 type graph = {maxNodeNum: int,
               succ: node list GraphTable,

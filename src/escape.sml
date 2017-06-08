@@ -65,7 +65,7 @@ and travDecs env d [] = env
 
 in
 
-fun findEscape prog = travExp (dictNew String.compare) 0 prog
+fun findEscape prog = travExp (dictNewStr()) 0 prog
 
 end
 end
