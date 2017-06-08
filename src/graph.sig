@@ -4,7 +4,7 @@ sig
 type graph
 type node
 
-type 'data GraphTable = (node, 'data) dictionary.Dict
+type 'data GraphTable = (node, 'data) dict.Dict
 val newGraphTable: unit -> 'a GraphTable
 
 val newGraph: unit -> graph

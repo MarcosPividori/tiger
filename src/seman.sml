@@ -6,7 +6,7 @@ local
 open abs
 open env
 open error
-open dictionary
+open dict
 open temp
 open trans
 open types

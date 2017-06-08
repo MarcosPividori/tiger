@@ -1,4 +1,4 @@
-structure dictionary :> dictionary =
+structure dict :> dict =
 struct
 open Splaymap
 

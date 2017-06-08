@@ -1,7 +1,7 @@
 structure canon =
 struct
 local
-  open dictionary
+  open dict
   open tree
 
   infixr 0 $

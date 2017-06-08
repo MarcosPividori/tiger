@@ -1,4 +1,4 @@
-signature dictionary =
+signature dict =
 sig
 
 type ('a, 'b) Dict

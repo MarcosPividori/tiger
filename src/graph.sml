@@ -1,6 +1,6 @@
 structure graph :> graph = struct
 
-open dictionary
+open dict
 open Splayset
 
 type node = int

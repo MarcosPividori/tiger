@@ -4,7 +4,7 @@ local
 
 open abs
 open error
-open dictionary
+open dict
 
 type depth = int
 type escEnv = (string, depth * bool ref) Dict
