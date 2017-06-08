@@ -18,9 +18,9 @@ fun codegen frame (stm: stm) : instr list =
   let val ilist = ref (nil: instr list)
     fun emit x = ilist := x :: !ilist
     fun emitOper assem src dst =
-            emit $ AOPER {assem=assem, src=src, dst=dst, jump=NONE}
+            emit $ AOPER {assem=assem, src=src, dst=dst, jump=[]}
     fun emitJmp assem labels =
-            emit $ AOPER {assem=assem, src=[], dst=[], jump=SOME labels}
+            emit $ AOPER {assem=assem, src=[], dst=[], jump=labels}
     (* munchArgs: Tree.exp list -> Temp.temp list
      * Push all the argument to the registers and the stack according to the
      * calling convention. *)

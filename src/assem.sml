@@ -7,7 +7,7 @@ type label = temp.label
 datatype instr = AOPER of {assem: string,
                            src: temp list,
                            dst: temp list,
-                           jump: label list option}
+                           jump: label list}
                | ALABEL of {assem: string,
                             lab: label}
                | AMOVE of {assem: string,
