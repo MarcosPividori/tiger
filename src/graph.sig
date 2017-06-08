@@ -2,9 +2,10 @@ signature graph =
 sig
 
 type graph
-eqtype node
+type node
 
-type 'data GraphTable = (node, 'data) hashtable.HashT
+type 'data GraphTable = (node, 'data) dictionary.Dict
+val newGraphTable: unit -> 'a GraphTable
 
 val newGraph: unit -> graph
 
