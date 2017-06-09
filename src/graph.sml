@@ -17,9 +17,9 @@ type graph = {maxNodeNum: int,
 
 fun nodes ({succ,...}:graph) = dictKeys succ
 
-fun succ ({succ,...}:graph) nod = listItems (dictGet succ nod)
+fun succ ({succ,...}:graph) nod = dictGet succ nod
 
-fun pred ({pred,...}:graph) nod = listItems (dictGet pred nod)
+fun pred ({pred,...}:graph) nod = dictGet pred nod
 
 fun comparePair ((n11, n12), (n21, n22)) = case Int.compare (n11, n21) of
         EQUAL => Int.compare (n12, n22)
@@ -48,6 +48,8 @@ fun addEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) =
               succ = dictRInsert succ a (add (dictGet succ a, b)),
               matrix = add (matrix, (a,b))}
 
+fun addUndEdge g (a, b) = addEdge (addEdge g (a, b)) (b, a)
+
 fun rmEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) =
         if not (isEdge g (a, b))
           then g
@@ -68,8 +70,30 @@ fun rmNode (g as {maxNodeNum, pred, succ, matrix}) nod =
           matrix=matrix1}
       end
 
+fun listEdges ({matrix,...}:graph) = listItems matrix
+
+fun rmUndEdge g (a, b) = rmEdge (rmEdge g (a, b)) (b, a)
+
 fun degree ({succ,...}:graph) nod = numItems (dictGet succ nod)
 
 val nodeToString = Int.toString
+
+val compareNode = Int.compare
+
+fun undGraphFromList edgeLst = let
+      fun addNod (nod, g as {maxNodeNum, pred, succ, matrix}) =
+        case dictSearch pred nod of
+          SOME _ => g
+        | NONE => {maxNodeNum = if nod > maxNodeNum then nod else maxNodeNum,
+                   pred = dictInsert pred nod (empty Int.compare),
+                   succ = dictInsert succ nod (empty Int.compare),
+                   matrix = matrix}
+      val g1 = List.foldl addNod (newGraph()) (map #1 edgeLst @ map #2 edgeLst)
+    in List.foldl (fn (e, g) => addUndEdge g e) g1 edgeLst end
+
+fun coalesceUndEdge g (a, b) = let
+        val succB = succ g b
+        val g1 = rmNode g b
+      in foldl (fn (n, gg) => addUndEdge gg (a, n)) g1 succB end
 
 end
