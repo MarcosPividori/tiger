@@ -85,7 +85,7 @@ fun showfgraph ({control, def, use, ismove}:flowgraph) instrList nodeLst = let
         | printList (x::xs) = (print x; print ", "; printList xs)
       val listInstrNode = ListPair.zip (instrList, nodeLst)
       fun printInstr (inst, nod) = let
-            val suc = map nodeToString $ succ control nod
+            val suc = map nodeToString $ listItems $ succ control nod
              in (print $ nodeToString nod; print ": ";
                  print $ assem.format (fn n => n) inst;
                  print "  => "; printList suc;
@@ -119,7 +119,7 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
               val outNod = dictGet out nod
               val useNod = addList (emptySet, dictGet use nod)
               val defNod = addList (emptySet, dictGet def nod)
-              val succNod = succ control nod
+              val succNod = listItems $ succ control nod
               val outNod1 = foldr union emptySet $ map (dictGet inn) succNod
               val innNod1 = union (useNod, difference (outNod1, defNod))
               val inn1 = dictRInsert inn nod innNod1
@@ -147,13 +147,14 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
 
         fun addInter (nod, graph) = let
               val defTmp = dictGet def nod
+              val useTmp = dictGet use nod
               val defNod = map (dictGet tnode) defTmp
               fun getEdges a = map (fn n => (a, n)) defNod @
                                map (fn n => (n, a)) defNod
-              val outNod = map (dictGet tnode) $ listItems
-                (if dictGet ismove nod
-                  then difference (dictGet out nod, addList (emptySet, defTmp))
-                  else dictGet out nod)
+              val outNod = map (dictGet tnode) $ listItems $ difference
+                ((if dictGet ismove nod
+                   then difference (dictGet out nod, addList (emptySet, useTmp))
+                   else dictGet out nod), addList (emptySet, defTmp))
               val edgeLst = concat $ map getEdges outNod
             in foldl (fn (e, g) => addEdge g e) graph edgeLst end
 
@@ -173,7 +174,8 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
  * interference graph, and for each node, a list of nodes adjacent to it. *)
 fun showigraph ({graph, gtemp, tnode, moves}:igraph) = let
       val tmpLst = map (dictGet gtemp) $ nodes graph
-      fun succTmp t = map (dictGet gtemp) $ succ graph $ dictGet tnode t
+      fun succTmp t = map (dictGet gtemp) $ listItems
+                        $ succ graph $ dictGet tnode t
       fun printList [] = ()
         | printList [x] = print x
         | printList (x::xs) = (print x; print ", "; printList xs)
