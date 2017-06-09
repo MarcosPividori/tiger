@@ -21,8 +21,8 @@ fun succ ({succ,...}:graph) nod = dictGet succ nod
 
 fun pred ({pred,...}:graph) nod = dictGet pred nod
 
-fun comparePair ((n11, n12), (n21, n22)) = case Int.compare (n11,n21) of
-        EQUAL => Int.compare (n12,n22)
+fun comparePair ((n11, n12), (n21, n22)) = case Int.compare (n11, n21) of
+        EQUAL => Int.compare (n12, n22)
       | r => r
 
 fun newGraph () = {maxNodeNum=0,
@@ -36,23 +36,23 @@ fun addNode {maxNodeNum, pred, succ, matrix} =
        succ = dictInsert succ maxNodeNum [],
        matrix = matrix}, maxNodeNum)
 
-fun isEdge ({matrix,...}:graph) a b = case peek (matrix, (a,b)) of
+fun isEdge ({matrix,...}:graph) (a, b) = case peek (matrix, (a, b)) of
         SOME _ => true
       | NONE => false
 
-fun addEdge (g as {maxNodeNum, pred, succ, matrix}) a b =
-      if isEdge g a b
+fun addEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) =
+      if isEdge g (a, b)
         then g
         else {maxNodeNum = maxNodeNum,
               pred = dictRInsert pred b (a::(dictGet pred b)),
               succ = dictRInsert succ a (b::(dictGet succ a)),
               matrix = add (matrix, (a,b))}
 
-fun rmEdge (g as {maxNodeNum, pred, succ, matrix}) a b = let
+fun rmEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) = let
         fun rmFromList _ [] = []
           | rmFromList a (x::xs) = if a = x then xs else x :: rmFromList a xs
       in
-        if not (isEdge g a b)
+        if not (isEdge g (a, b))
           then g
           else {maxNodeNum = maxNodeNum,
                 pred = dictRInsert pred b (rmFromList a (dictGet pred b)),
@@ -62,4 +62,4 @@ fun rmEdge (g as {maxNodeNum, pred, succ, matrix}) a b = let
 
 val nodeToString = Int.toString
 
-end 
+end
