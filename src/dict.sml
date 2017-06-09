@@ -25,6 +25,9 @@ fun dictRInsert dict key value = insert (dict, key, value)
 
 fun dictRemove dict key = #1 (remove (dict,key)) handle _ => raise notExists
 
+fun dictRemList dict lst =
+      List.foldl (fn (a, dict2) => #1 (remove (dict2, a))) dict lst
+
 fun dictSearch dict key = peek (dict, key)
 
 fun dictGet dict key = case dictSearch dict key of

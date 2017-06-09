@@ -21,6 +21,8 @@ val dictRInsert : ('a, 'b) Dict -> 'a -> 'b -> ('a, 'b) Dict
 
 val dictRemove  : ('a, 'b) Dict -> 'a -> ('a, 'b) Dict
 
+val dictRemList : ('a, 'b) Dict -> 'a list -> ('a, 'b) Dict
+
 val dictSearch  : ('a, 'b) Dict -> 'a -> 'b option
 
 val dictGet     : ('a, 'b) Dict -> 'a -> 'b
