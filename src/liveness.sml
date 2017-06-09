@@ -7,6 +7,9 @@ open temp
 open Splayset
 open List
 
+infixr 0 $
+fun x $ y = x y
+
 (* type to represent flow graphs *)
 type flowgraph = {
     control: graph,
@@ -42,18 +45,18 @@ fun instrs2graph instrLst =
                    labToNod1, nod::nodes) end
           | addInst (ALABEL {assem, lab},
                      (fg as {control, def, use, ismove}, labToNod, nodes)) =
-                   let val (graph, nod) = case dictSearch labToNod lab of
-                                            SOME nod => (control, nod)
-                                          | NONE => addNode control
-                       val def1 = dictInsert def nod []
-                       val use1 = dictInsert use nod []
-                       val ismove1 = dictInsert ismove nod false
-                       val labToNod1 = dictInsert labToNod lab nod
-                       val control1 = case nodes of
-                                        [] => graph (* last instr *)
-                                      | next::_ => addEdge graph (nod, next)
-                    in ({control=control1, def=def1, use=use1, ismove=ismove1},
-                        labToNod1, nod::nodes) end
+              let val (graph, nod) = case dictSearch labToNod lab of
+                          SOME nod => (control, nod)
+                        | NONE => addNode control
+                  val def1 = dictInsert def nod []
+                  val use1 = dictInsert use nod []
+                  val ismove1 = dictInsert ismove nod false
+                  val labToNod1 = dictInsert labToNod lab nod
+                  val control1 = case nodes of
+                          [] => graph (* last instr *)
+                        | next::_ => addEdge graph (nod, next)
+               in ({control=control1, def=def1, use=use1, ismove=ismove1},
+                   labToNod1, nod::nodes) end
           | addInst (AMOVE {assem, src, dst},
                      ({control, def, use, ismove}, labToNod, nodes)) =
               let val (graph, nod) = addNode control
@@ -61,15 +64,15 @@ fun instrs2graph instrLst =
                   val use1 = dictInsert use nod [src]
                   val ismove1 = dictInsert ismove nod true
                   val control1 = case nodes of
-                                   [] => graph (* last instr *)
-                                 | next::_ => addEdge graph (nod, next)
+                          [] => graph (* last instr *)
+                        | next::_ => addEdge graph (nod, next)
                in ({control=control1, def=def1, use=use1, ismove=ismove1},
                    labToNod, nod::nodes) end
 
         val (fgraph, _, nodeLst) = let
-             val initFg = {control=newGraph(), def=newGraphTable(),
-                              use=newGraphTable(), ismove=newGraphTable()}
-              in foldr addInst (initFg, dictNewStr(), []) instrLst end
+              val initFg = {control=newGraph(), def=newGraphTable(),
+                               use=newGraphTable(), ismove=newGraphTable()}
+               in foldr addInst (initFg, dictNewStr(), []) instrLst end
       in
         (fgraph, nodeLst)
       end
@@ -82,14 +85,15 @@ fun showfgraph ({control, def, use, ismove}:flowgraph) instrList nodeLst = let
         | printList (x::xs) = (print x; print ", "; printList xs)
       val listInstrNode = ListPair.zip (instrList, nodeLst)
       fun printInstr (inst, nod) = let
-          val suc = map nodeToString (succ control nod)
-        in (print (nodeToString nod); print ": ";
-            print (assem.format (fn n => n) inst);
-            print "  => "; printList suc;
-            print "  (use: "; printList (dictGet use nod);
-            print " def: "; printList (dictGet def nod);
-            print " ismove: ";
-            print (Bool.toString (dictGet ismove nod)^") \n")) end
+            val suc = map nodeToString $ succ control nod
+             in (print $ nodeToString nod; print ": ";
+                 print $ assem.format (fn n => n) inst;
+                 print "  => "; printList suc;
+                 print "  (use: "; printList $ dictGet use nod;
+                 print " def: "; printList $ dictGet def nod;
+                 print " ismove: ";
+                 print $ (Bool.toString $ dictGet ismove nod) ^ ") \n") end
+      val _ = print "Flow graph:\n"
     in app printInstr listInstrNode end
 
 (* type to represent interference graphs *)
@@ -111,27 +115,27 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
         val outInit = innInit
 
         fun updateInOut (nod, (inn, out, flag)) = let
-             val innNod = dictGet inn nod
-             val outNod = dictGet out nod
-             val useNod = addList (emptySet, dictGet use nod)
-             val defNod = addList (emptySet, dictGet def nod)
-             val succNod = succ control nod
-             val outNod1 = foldr union emptySet (map (dictGet inn) succNod)
-             val innNod1 = union (useNod, difference (outNod1, defNod))
-             val inn1 = dictRInsert inn nod innNod1
-             val out1 = dictRInsert out nod outNod1
-             val change = (not (equal (outNod, outNod1)))
-                   orelse (not (equal (innNod, innNod1)))
-          in (inn1, out1, change orelse flag) end
+              val innNod = dictGet inn nod
+              val outNod = dictGet out nod
+              val useNod = addList (emptySet, dictGet use nod)
+              val defNod = addList (emptySet, dictGet def nod)
+              val succNod = succ control nod
+              val outNod1 = foldr union emptySet $ map (dictGet inn) succNod
+              val innNod1 = union (useNod, difference (outNod1, defNod))
+              val inn1 = dictRInsert inn nod innNod1
+              val out1 = dictRInsert out nod outNod1
+              val change = (not $ equal (outNod, outNod1))
+                    orelse (not $ equal (innNod, innNod1))
+            in (inn1, out1, change orelse flag) end
 
         fun getFixedPoint (inn, out, false) = out
           | getFixedPoint (inn, out, true) =
-              getFixedPoint (foldr updateInOut (inn, out, false) nodeLst)
+              getFixedPoint $ foldr updateInOut (inn, out, false) nodeLst
 
         val out = getFixedPoint (innInit, outInit, true)
 
         val listTemps = concat (map #2 (dictToList def) @
-                                     map #2 (dictToList use))
+                                map #2 (dictToList use))
 
         fun addTemp (tmp, (g, tnode, gtemp)) = case dictSearch tnode tmp of
                 SOME nod => (g, tnode, gtemp)
@@ -146,20 +150,20 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
               val defNod = map (dictGet tnode) defTmp
               fun getEdges a = map (fn n => (a, n)) defNod @
                                map (fn n => (n, a)) defNod
-              val outNod = map (dictGet tnode) (listItems
+              val outNod = map (dictGet tnode) $ listItems
                 (if dictGet ismove nod
                   then difference (dictGet out nod, addList (emptySet, defTmp))
-                  else dictGet out nod))
-              val edgeLst = concat (map getEdges outNod)
+                  else dictGet out nod)
+              val edgeLst = concat $ map getEdges outNod
             in foldl (fn (e, g) => addEdge g e) graph edgeLst end
 
         val interfGraph = foldl addInter initGraph nodeLst
 
-        val moves = map (fn nod =>
-                          let val useNod = dictGet tnode (hd (dictGet use nod))
-                            val defNod = dictGet tnode (hd (dictGet def nod))
+        val moves = map (fn nod => let
+                            val useNod = dictGet tnode $ hd $ dictGet use nod
+                            val defNod = dictGet tnode $ hd $ dictGet def nod
                            in (useNod, defNod) end)
-              (filter (dictGet ismove) nodeLst)
+              $ filter (dictGet ismove) nodeLst
       in
         ({graph=interfGraph, tnode=tnode, gtemp=gtemp, moves=moves},
          dictApp listItems out)
@@ -168,12 +172,13 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
 (* showigraph just prints out, for debugging purposes, a list of nodes in the
  * interference graph, and for each node, a list of nodes adjacent to it. *)
 fun showigraph ({graph, gtemp, tnode, moves}:igraph) = let
-      val tmpLst = map (dictGet gtemp) (nodes graph)
-      fun succTmp t = map (dictGet gtemp) (succ graph (dictGet tnode t))
+      val tmpLst = map (dictGet gtemp) $ nodes graph
+      fun succTmp t = map (dictGet gtemp) $ succ graph $ dictGet tnode t
       fun printList [] = ()
         | printList [x] = print x
         | printList (x::xs) = (print x; print ", "; printList xs)
       fun printTmp t = (print t; print " => ";
-                        printList (succTmp t); print "\n")
+                        printList $ succTmp t; print "\n")
+      val _ = print "Interference graph:\n"
     in app printTmp tmpLst end
 end
