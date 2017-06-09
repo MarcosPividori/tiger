@@ -54,6 +54,10 @@ val machineRegs = argregs @ callersaves @ calleesaves
 val tempMap = dictInsList (dictNewStr())
                           (ListPair.zip (machineRegs, machineRegs))
 
+type register = string
+
+fun regToString reg = reg
+
 datatype access = InFrame of int
                 | InReg of temp.temp
 
@@ -62,8 +66,6 @@ type frame = {
   formals: access list, (* one access per parameter *)
   actualLocal: int ref (* counter of locals in the given frame *)
 }
-
-type register = string
 
 datatype frag = PROC of {body: tree.stm, frame: frame}
               | STRING of temp.label * string
