@@ -56,6 +56,20 @@ fun rmEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) =
                 succ = dictRInsert succ a (delete (dictGet succ a, b)),
                 matrix = delete (matrix, (a,b))}
 
+fun rmNode (g as {maxNodeNum, pred, succ, matrix}) nod =
+      let val pre = listItems (dictGet pred nod)
+        val suc = listItems (dictGet succ nod)
+        val edges = map (fn a => (a, nod)) pre @ map (fn a => (nod, a)) suc
+        val {maxNodeNum=maxNodeNum1, pred=pred1, succ=succ1, matrix=matrix1} =
+              List.foldl (fn (e, graph) => rmEdge graph e) g edges
+      in {maxNodeNum=maxNodeNum1,
+          pred=dictRemove pred1 nod,
+          succ=dictRemove succ1 nod,
+          matrix=matrix1}
+      end
+
+fun degree ({succ,...}:graph) nod = numItems (dictGet succ nod)
+
 val nodeToString = Int.toString
 
 end

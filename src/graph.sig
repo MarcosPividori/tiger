@@ -15,9 +15,12 @@ val succ: graph -> node -> node list
 val pred: graph -> node -> node list
 
 val addNode: graph -> graph * node
+val rmNode: graph -> node -> graph
 val isEdge: graph -> edge -> bool
 val addEdge: graph -> edge -> graph
 val rmEdge: graph -> edge -> graph
+
+val degree: graph -> node -> int 
 
 val nodeToString: node -> string (* for debugging *)
 
