@@ -19,6 +19,9 @@ val FpPrevLev : int
 val argregs : temp.temp list
 val calldefs : temp.temp list
 val callersaves : temp.temp list
+val machineRegs : register list
+
+val tempMap : (temp.temp, register) dict.Dict
 
 val newFrame : {name: temp.label, formals: bool list} -> frame
 val name : frame -> temp.label

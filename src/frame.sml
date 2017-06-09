@@ -21,6 +21,7 @@ structure frame :> frame = struct
 *)
 
 open tree
+open dict
 
 val FP = "rbp"            (* frame pointer register *)
 val SP = "rsp"            (* stack pointer register *)
@@ -47,6 +48,11 @@ val calleesaves = ["rbx", "r12", "r13", "r14", "r15"]
                   (* registers that must be preserved by the callee *)
 val calldefs = [RV] @ argregs @ callersaves
                (* registers possibly written by the callee *)
+val machineRegs = argregs @ callersaves @ calleesaves
+                  (* all registers available for coloring *)
+
+val tempMap = dictInsList (dictNewStr())
+                          (ListPair.zip (machineRegs, machineRegs))
 
 datatype access = InFrame of int
                 | InReg of temp.temp
