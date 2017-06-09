@@ -11,15 +11,15 @@ type edge = node * node
 fun newGraphTable () = dictNewInt()
 
 type graph = {maxNodeNum: int,
-              succ: node list GraphTable,
-              pred: node list GraphTable,
+              succ: node set GraphTable,
+              pred: node set GraphTable,
               matrix: edge set}
 
 fun nodes ({succ,...}:graph) = dictKeys succ
 
-fun succ ({succ,...}:graph) nod = dictGet succ nod
+fun succ ({succ,...}:graph) nod = listItems (dictGet succ nod)
 
-fun pred ({pred,...}:graph) nod = dictGet pred nod
+fun pred ({pred,...}:graph) nod = listItems (dictGet pred nod)
 
 fun comparePair ((n11, n12), (n21, n22)) = case Int.compare (n11, n21) of
         EQUAL => Int.compare (n12, n22)
@@ -32,8 +32,8 @@ fun newGraph () = {maxNodeNum=0,
 
 fun addNode {maxNodeNum, pred, succ, matrix} =
      ({maxNodeNum = maxNodeNum+1,
-       pred = dictInsert pred maxNodeNum [],
-       succ = dictInsert succ maxNodeNum [],
+       pred = dictInsert pred maxNodeNum (empty Int.compare),
+       succ = dictInsert succ maxNodeNum (empty Int.compare),
        matrix = matrix}, maxNodeNum)
 
 fun isEdge ({matrix,...}:graph) (a, b) = case peek (matrix, (a, b)) of
@@ -44,21 +44,17 @@ fun addEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) =
       if isEdge g (a, b)
         then g
         else {maxNodeNum = maxNodeNum,
-              pred = dictRInsert pred b (a::(dictGet pred b)),
-              succ = dictRInsert succ a (b::(dictGet succ a)),
+              pred = dictRInsert pred b (add (dictGet pred b, a)),
+              succ = dictRInsert succ a (add (dictGet succ a, b)),
               matrix = add (matrix, (a,b))}
 
-fun rmEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) = let
-        fun rmFromList _ [] = []
-          | rmFromList a (x::xs) = if a = x then xs else x :: rmFromList a xs
-      in
+fun rmEdge (g as {maxNodeNum, pred, succ, matrix}) (a, b) =
         if not (isEdge g (a, b))
           then g
           else {maxNodeNum = maxNodeNum,
-                pred = dictRInsert pred b (rmFromList a (dictGet pred b)),
-                succ = dictRInsert succ a (rmFromList b (dictGet succ a)),
+                pred = dictRInsert pred b (delete (dictGet pred b, a)),
+                succ = dictRInsert succ a (delete (dictGet succ a, b)),
                 matrix = delete (matrix, (a,b))}
-      end
 
 val nodeToString = Int.toString
 
