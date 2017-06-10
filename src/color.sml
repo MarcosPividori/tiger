@@ -71,6 +71,7 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
                                                        else mgg) mg succX
            in ([x], g, mg1) end
 
+      (* TODO: use spillCost *)
       fun posSpill graph moveGraph = case nodes graph of
             [] => ([], graph, moveGraph)
           | (x::_) => ([x], rmNode graph x, if isNode moveGraph x

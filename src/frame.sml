@@ -48,7 +48,7 @@ val calleesaves = ["rbx", "r12", "r13", "r14", "r15"]
                   (* registers that must be preserved by the callee *)
 val calldefs = [RV] @ argregs @ callersaves
                (* registers possibly written by the callee *)
-val machineRegs = argregs @ callersaves @ calleesaves
+val machineRegs = specialregs @ argregs @ callersaves @ calleesaves
                   (* all registers available for coloring *)
 
 val tempMap = dictInsList (dictNewStr())
