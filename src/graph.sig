@@ -2,7 +2,7 @@ signature graph =
 sig
 
 type graph
-type node
+eqtype node
 type edge = node * node
 
 type 'data GraphTable = (node, 'data) dict.Dict
@@ -16,6 +16,7 @@ val pred: graph -> node -> node Splayset.set
 
 val addNode: graph -> graph * node
 val rmNode: graph -> node -> graph
+val isNode: graph -> node -> bool
 val isEdge: graph -> edge -> bool
 val addEdge: graph -> edge -> graph
 val rmEdge: graph -> edge -> graph

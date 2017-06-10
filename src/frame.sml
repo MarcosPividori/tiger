@@ -98,6 +98,8 @@ fun exp (InFrame k) = MEM (BINOP (PLUS, TEMP FP, CONST k))
 
 fun externalCall (s, l) = ESEQ (EXP (CALL (NAME s, l)), TEMP RV)
 
+val compareRegister = String.compare
+
 (* Add statements to save the escaping arguments and save/restore callee save *)
 fun procEntryExit1 ({formals, ...}: frame, body) = let
     fun seq [] = EXP (CONST 0)

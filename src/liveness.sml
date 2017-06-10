@@ -136,6 +136,8 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
 
         val listTemps = concat (map #2 (dictToList def) @
                                 map #2 (dictToList use))
+                      @ dictKeys frame.tempMap
+                      (* machine registers are always present in igraphs *)
 
         fun addTemp (tmp, (g, tnode, gtemp)) = case dictSearch tnode tmp of
                 SOME nod => (g, tnode, gtemp)

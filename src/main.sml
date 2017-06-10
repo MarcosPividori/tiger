@@ -5,6 +5,7 @@ open escape
 open lexer
 open liveness
 open parser
+open regalloc
 open seman
 open show
 open List BasicIO Nonstdio
@@ -43,33 +44,34 @@ fun main args =
       val intermList = trans.getResult()
 
       val (procList, stringList) = foldr (fn (frag, (pl, sl)) =>
-              case frag of
-                frame.PROC r => (r :: pl, sl)
-              | frame.STRING p => (pl, p :: sl))
-            ([],[]) intermList
+          case frag of
+            frame.PROC r => (r :: pl, sl)
+          | frame.STRING p => (pl, p :: sl))
+        ([],[]) intermList
 
-      val assemList = concat $ foldr (fn ({frame, body}, lst) =>
-                                      map (codegen frame) (canonize body) @ lst)
-                               [] procList
+      fun processProc {frame, body} =
+        let val canonizedBody = canonize body
+          val assemLst = concat $ map (codegen frame) canonizedBody
+          val (fGraph, nodeLst) = instrs2graph assemLst
+          val (iGraph, liveOut) = interferenceGraph fGraph nodeLst
+          val (instrLst, allocMap) = alloc assemLst frame
+          val codeLst = map
+                (assem.format (fn t => regToString $ dictGet allocMap t))
+                instrLst
+          val _ = if ir then print $ showTree body else ()
+          val _ = if canon then
+            let val canonList = concat $ map (canonize o #body) procList
+             in app (print o showTree) canonList end else ()
+          val _ = if code then app print codeLst else ()
+          val _ = if flow then showfgraph fGraph assemLst nodeLst else ()
+          val _ = if interf then showigraph iGraph else ()
+        in
+          ()
+        end
 
-      val (fGraph, nodeLst) = instrs2graph assemList
-
-      val (iGraph, liveOut) = interferenceGraph fGraph nodeLst
+      val _ = map processProc procList
 
       val _ = if ast then printAst expr else ()
-
-      val _ = if ir then app (print o showTree o #body) procList else ()
-
-      val _ = if canon then
-                let val canonList = concat $ map (canonize o #body) procList
-                 in app (print o showTree) canonList end else ()
-
-      val _ = if code then app print $ map (assem.format (fn n => n)) assemList
-                else ()
-
-      val _ = if flow then showfgraph fGraph assemList nodeLst else ()
-
-      val _ = if interf then showigraph iGraph else ()
     in
       printStderr "Successful compilation\n"
     end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg

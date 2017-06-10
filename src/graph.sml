@@ -36,6 +36,10 @@ fun addNode {maxNodeNum, pred, succ, matrix} =
        succ = dictInsert succ maxNodeNum (empty Int.compare),
        matrix = matrix}, maxNodeNum)
 
+fun isNode ({succ,...}:graph) n = case dictSearch succ n of
+        SOME _ => true
+      | NONE => false
+
 fun isEdge ({matrix,...}:graph) (a, b) = case peek (matrix, (a, b)) of
         SOME _ => true
       | NONE => false
@@ -93,7 +97,8 @@ fun undGraphFromList edgeLst = let
 
 fun coalesceUndEdge g (a, b) = let
         val succB = succ g b
+        val succB1 = if member (succB, a) then delete (succB, a) else succB
         val g1 = rmNode g b
-      in foldl (fn (n, gg) => addUndEdge gg (a, n)) g1 succB end
+      in foldl (fn (n, gg) => addUndEdge gg (a, n)) g1 succB1 end
 
 end

@@ -33,6 +33,8 @@ val allocLocal : frame -> bool -> access
 val exp : access -> tree.exp
 val externalCall : string * tree.exp list -> tree.exp
 
+val compareRegister: register * register -> order
+
 datatype frag = PROC of {body: tree.stm, frame: frame}
               | STRING of temp.label * string
 
