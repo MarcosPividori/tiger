@@ -70,6 +70,17 @@ type frame = {
 datatype frag = PROC of {body: tree.stm, frame: frame}
               | STRING of temp.label * string
 
+fun stringLen s =
+    let fun aux[] = 0
+          | aux(#"\\":: #"x"::_::_::t) = 1+aux(t)
+          | aux(_::t) = 1+aux(t)
+    in aux(explode s) end
+
+fun string label s = let
+      val len = "  .quad " ^ makestring(stringLen s)
+      val str = "  .ascii \""^s^"\""
+    in label ^ ":\n" ^ len ^ "\n" ^ str end
+
 fun allocLocal ({actualLocal, ...}: frame) true =
       let val ret = (!actualLocal+localsOffInitial) * WSize
         val _ = actualLocal := (!actualLocal-1)
@@ -82,9 +93,7 @@ fun newFrame {name, formals} = let
     fun allocArg _ [] = []
       | allocArg argn (escaped::xs) =
           (if argn < nregs
-            then if escaped
-                   then allocLocal f true
-                   else InReg (List.nth(argregs, argn))
+            then allocLocal f escaped
             else InFrame ((argn - nregs + argsOffInitial) * WSize))
           :: allocArg (argn+1) xs
   in {name=name, formals=allocArg 0 formals, actualLocal= #actualLocal f} end
@@ -101,27 +110,44 @@ fun externalCall (s, l) = ESEQ (EXP (CALL (NAME s, l)), TEMP RV)
 val compareRegister = String.compare
 
 (* Add statements to save the escaping arguments and save/restore callee save *)
-fun procEntryExit1 ({formals, ...}: frame, body) = let
+fun procEntryExit1 ({formals, ...}: frame) body = let
     fun seq [] = EXP (CONST 0)
       | seq [s] = s
       | seq (x::xs) = SEQ (x, seq xs)
     fun moveArgToStack ((InFrame k)::params) (reg::regs) =
-          (MOVE (exp (InFrame k), TEMP reg)) :: (moveArgToStack params regs)
-      | moveArgToStack (_::params) (_::regs) = moveArgToStack params regs
+          (MOVE (exp (InFrame k), TEMP reg)) :: moveArgToStack params regs
+      | moveArgToStack ((InReg t)::params) (reg::regs) =
+          (MOVE (TEMP t, TEMP reg)) :: moveArgToStack params regs
       | moveArgToStack _ _ = []
-  in seq ((moveArgToStack formals argregs) @ [body])
-     (* TODO: incomplete, need to save/restore callee saves *)
+    val (preCS,postCS) = foldl
+          (fn (t, (a, b)) => let val fresh = temp.newTemp()
+                              in (MOVE (TEMP fresh, TEMP t) :: a,
+                                  MOVE (TEMP t, TEMP fresh) :: b) end)
+          ([], []) calleesaves
+  in seq ((moveArgToStack formals argregs) @ preCS @ [body] @ postCS)
   end
 
-(* ... *)
-fun procEntryExit2 (frame, body) = body @
+(* Set src and dst to ensure calleesaves registers are preserved *)
+fun procEntryExit2 body =
+     [assem.AOPER {assem="", src=[], dst=[SP, FP] @ calleesaves, jump=[]}] @
+     body @
      [assem.AOPER {assem="", src=[SP, FP, RV] @ calleesaves, dst=[], jump=[]}]
 
 (* Add instructions to update the SP according to the frame size before and
  * after the function's body *)
-fun procEntryExit3 ({name, ...}: frame, body) =
-      {prolog = "PROCEDURE " ^ name ^ "\n",
-       body = body,
-       epilog = "END " ^ name ^ "\n"}
-      (* TODO: incomplete *)
+fun procEntryExit3 ({name, actualLocal,...}: frame) body =
+     let val size = (!actualLocal) * WSize * ~1
+     in concat [
+       ".globl "^name^"\n",
+       name ^ ":\n",
+       "pushq %rbp\n",
+       "pushq %rbp\n",
+       "movq %rsp, %rbp\n",
+       "subq $"^Int.toString(size)^" %rsp\n",
+       body,
+       "movq %rbp %rsp\n",
+       "popq %rbp\n",
+       "ret\n",
+       ";-----------\n"]
+     end
 end

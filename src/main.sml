@@ -43,15 +43,12 @@ fun main args =
       val _ = transProg expr
       val intermList = trans.getResult()
 
-      val (procList, stringList) = foldr (fn (frag, (pl, sl)) =>
-          case frag of
-            frame.PROC r => (r :: pl, sl)
-          | frame.STRING p => (pl, p :: sl))
-        ([],[]) intermList
+      fun processString (label, str) = print $ (string label str) ^ "\n"
 
       fun processProc {frame, body} =
         let val canonizedBody = canonize body
-          val assemLst = concat $ map (codegen frame) canonizedBody
+          val assemLst = concat $ map (procEntryExit2 o codegen frame)
+                                      canonizedBody
           val (fGraph, nodeLst) = instrs2graph assemLst
           val (iGraph, liveOut) = interferenceGraph fGraph nodeLst
           val (instrLst, allocMap) = alloc assemLst frame
@@ -60,16 +57,21 @@ fun main args =
                 instrLst
           val _ = if ir then print $ showTree body else ()
           val _ = if canon then
-            let val canonList = concat $ map (canonize o #body) procList
+            let val canonList = canonize body
              in app (print o showTree) canonList end else ()
-          val _ = if code then app print codeLst else ()
+          val _ = if code
+                    then (print $ procEntryExit3 frame $ String.concat codeLst)
+                    else ()
           val _ = if flow then showfgraph fGraph assemLst nodeLst else ()
           val _ = if interf then showigraph iGraph else ()
         in
           ()
         end
 
-      val _ = map processProc procList
+      val _ = app (fn frag => case frag of
+                    frame.PROC r => processProc r
+                  | frame.STRING p => processString p)
+                  intermList
 
       val _ = if ast then printAst expr else ()
     in

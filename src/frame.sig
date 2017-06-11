@@ -28,6 +28,8 @@ val newFrame : {name: temp.label, formals: bool list} -> frame
 val name : frame -> temp.label
 val formals : frame -> access list
 
+val string: temp.label -> string -> string
+
 val allocLocal : frame -> bool -> access
 
 val exp : access -> tree.exp
@@ -38,11 +40,10 @@ val compareRegister: register * register -> order
 datatype frag = PROC of {body: tree.stm, frame: frame}
               | STRING of temp.label * string
 
-val procEntryExit1 : frame * tree.stm -> tree.stm
+val procEntryExit1 : frame -> tree.stm -> tree.stm
 
-val procEntryExit2 : frame * assem.instr list -> assem.instr list
+val procEntryExit2 : assem.instr list -> assem.instr list
 
-val procEntryExit3 : frame * assem.instr list ->
-      {prolog: string, body: assem.instr list, epilog: string}
+val procEntryExit3 : frame -> string -> string
 
 end

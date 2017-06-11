@@ -88,12 +88,11 @@ type frag = frame.frag
 val globData = ref ([]: frag list)
 
 fun procEntryExit ({frame, ...}: level) body =
-    let val label = STRING (name frame, "")
-      val body' = PROC {frame = frame, body = unNx body}
-      val final = STRING (";;-------", "")
-    in globData:= (!globData@[label, body', final]) end
+    let val body' = PROC {frame = frame,
+                          body = procEntryExit1 frame $ unNx body}
+    in globData:= (body' :: !globData) end
 
-fun getResult() = !globData
+fun getResult() = rev (!globData)
 
 
 (* Translate main expressions *)
@@ -103,17 +102,9 @@ fun nilExp() = Ex (CONST 0)
 
 fun intExp i = Ex (CONST i)
 
-fun stringLen s =
-    let fun aux[] = 0
-          | aux(#"\\":: #"x"::_::_::t) = 1+aux(t)
-          | aux(_::t) = 1+aux(t)
-    in aux(explode s) end
-
 fun stringExp (s:string) =
     let val l = newLabel()
-      val len = ".quad "^makestring(stringLen s)
-      val str = ".ascii \""^s^"\""
-      val _ = globData:= (!globData @ [STRING (l, len), STRING ("", str)])
+      val _ = globData:= (STRING (l, s) :: !globData)
     in Ex (NAME l) end
 
 fun callExp ({depth=actDepth, ...}:level) name external isproc
