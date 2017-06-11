@@ -25,8 +25,11 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
 
       val registersSet = addList (empty compareRegister, registers)
 
+      fun precoloredNode n = isSome $ dictSearch tempMap $ dictGet gtemp n
+
       fun simplify graph nodeStack moveNodSet =
            let fun validNod n = not (member (moveNodSet, n))
+                        andalso not (precoloredNode n)
                         andalso (degree graph n) < colorNum
            in case filter validNod $ nodes graph of
                 [] => (graph, nodeStack)
@@ -56,11 +59,14 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
             fun considerMoveNode (n, st as (lst, g, mg)) =
                   if degree mg n = 0
                     then (lst, g, rmNode mg n)
-                    else considerMove n (listItems (succ mg n)) st
+                    else if precoloredNode n
+                           then st
+                           else considerMove n (listItems (succ mg n)) st
         in foldl considerMoveNode ([], graph, moveGraph) (nodes moveGraph) end
 
       fun freeze graph moveGraph =
-        case List.filter (fn n => degree graph n < colorNum)
+        case List.filter (fn n => degree graph n < colorNum
+                                  andalso not $ precoloredNode n)
                          $ nodes moveGraph of
           [] => ([], graph, moveGraph)
         | (x::_) => let
@@ -72,7 +78,8 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
            in ([x], g, mg1) end
 
       (* TODO: use spillCost *)
-      fun posSpill graph moveGraph = case nodes graph of
+      fun posSpill graph moveGraph = case (List.filter (not o precoloredNode)
+                                                       $ nodes graph) of
             [] => ([], graph, moveGraph)
           | (x::_) => ([x], rmNode graph x, if isNode moveGraph x
                                               then rmNode moveGraph x
