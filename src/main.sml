@@ -35,6 +35,7 @@ fun main args =
         [n] => ((open_in n, n) handle _ => raise Fail $ n ^ " doesn't exist!")
       | []  => (std_in, "stdin")
       | _   => raise Fail "unknown option!"
+    fun printOut str = if code then print str else ()
   in
     let
       val lexbuf = lexStream entrada
@@ -43,9 +44,7 @@ fun main args =
       val _ = transProg expr
       val intermList = trans.getResult()
 
-      fun processString (label, str) = if code
-              then print $ (string label str) ^ "\n"
-              else ()
+      fun processString (label, str) = printOut $ (string label str) ^ "\n"
 
       fun processProc {frame, body} =
         let val canonizedBody = canonize body
@@ -54,26 +53,24 @@ fun main args =
           val (fGraph, nodeLst) = instrs2graph assemLst
           val (iGraph, liveOut) = interferenceGraph fGraph nodeLst
           val (instrLst, allocMap) = alloc assemLst frame
-          val codeLst = map
-                (assem.format (fn t => "%"^(regToString $ dictGet allocMap t)))
-                instrLst
+          fun tmp2str t = "%" ^ regToString (dictGet allocMap t)
+          val codeLst = map (assem.format tmp2str) instrLst
+          val _ = printOut $ procEntryExit3 frame $ String.concat codeLst
           val _ = if ir then print $ showTree body else ()
-          val _ = if canon then
-            let val canonList = canonize body
-             in app (print o showTree) canonList end else ()
-          val _ = if code
-                    then (print $ procEntryExit3 frame $ String.concat codeLst)
-                    else ()
+          val _ = if canon then app (print o showTree) $ canonize body else ()
           val _ = if flow then showfgraph fGraph assemLst nodeLst else ()
           val _ = if interf then showigraph iGraph else ()
-        in
-          ()
-        end
+        in () end
 
-      val _ = app (fn frag => case frag of
-                    frame.PROC r => processProc r
-                  | frame.STRING p => processString p)
-                  intermList
+      val (procLst, strLst) = foldr (fn (frag, (pL, sL)) => case frag of
+                                                  frame.PROC r => (r::pL, sL)
+                                                | frame.STRING s => (pL, s::sL))
+                                    ([],[]) intermList
+
+      val _ = printOut ".data\n"
+      val _ = app processString strLst
+      val _ = printOut ".text\n"
+      val _ = app processProc procLst
 
       val _ = if ast then printAst expr else ()
     in

@@ -24,10 +24,10 @@ fun replaceSrcDst src dst (#"'" :: #"s" :: n :: xs) =
 fun format (f: temp -> string) (i:instr) : string =
     case i of
         AOPER {assem, src, dst, jump} =>
-          if assem = "" then "" else
+          if assem = "" then "" else "  " ^
           implode (replaceSrcDst (map f src) (map f dst) (explode assem)) ^ "\n"
       | AMOVE {assem, src, dst} => if f src = f dst then "" else
-          implode (replaceSrcDst [f src] [f dst] (explode assem)) ^ "\n"
+          "  " ^ implode (replaceSrcDst [f src] [f dst] (explode assem)) ^ "\n"
       | ALABEL {assem, ...} => assem ^ "\n"
 
 end

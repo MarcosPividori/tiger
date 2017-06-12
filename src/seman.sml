@@ -318,7 +318,7 @@ fun transExp topLevel loopLevel venv tenv = let
                              | SOME t => check ln t
                 val typArg = List.map (check ln o #typ) params
                 val lab = newLabel()
-                val lev = newLevel {parent=topLevel
+                val lev = newLevel {parent=topLevel, origName=name
                       , name=if name = "_tigermain" then "_tigermain" else lab
                       , formals=List.map (fn x => !(#escape x)) params}
               in

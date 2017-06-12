@@ -6,7 +6,8 @@ type frag = frame.frag
 type level
 val getDepth : level -> int
 val outermost : level
-val newLevel : {parent: level, name: temp.label, formals: bool list} -> level
+val newLevel : {parent: level, name: temp.label,
+                origName: string, formals: bool list} -> level
 val formals : level -> access list
 val allocLocal : level -> bool -> access
 

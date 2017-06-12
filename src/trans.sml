@@ -22,12 +22,12 @@ val initialDepth = ~1
 
 val outermost: level = {
   parent = NONE,
-  frame = newFrame {name = "_main", formals = []},
+  frame = newFrame {name = "_main", origName = "_main", formals = []},
   depth = initialDepth}
 
-fun newLevel {parent = {frame, depth, ...} : level, name, formals} = {
+fun newLevel {parent = {frame, depth, ...} : level, name, origName, formals} = {
   parent = SOME frame,
-  frame = newFrame {name = name, formals = true :: formals},
+  frame = newFrame {name=name, origName=origName, formals= true :: formals},
           (* append static link (always escaped) *)
   depth = depth + 1}
 

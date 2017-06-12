@@ -62,7 +62,8 @@ datatype access = InFrame of int
                 | InReg of temp.temp
 
 type frame = {
-  name: string,
+  name: temp.label,
+  origName: string,
   formals: access list, (* one access per parameter *)
   actualLocal: int ref (* counter of locals in the given frame *)
 }
@@ -87,16 +88,18 @@ fun allocLocal ({actualLocal, ...}: frame) true =
       in InFrame ret end
   | allocLocal _ false = InReg (temp.newTemp())
 
-fun newFrame {name, formals} = let
+fun newFrame {name, origName, formals} = let
     val nregs = length argregs
-    val f : frame = {name=name, formals=[], actualLocal=ref localsInitial}
+    val f : frame = {name=name, origName=origName,
+                     formals=[], actualLocal=ref localsInitial}
     fun allocArg _ [] = []
       | allocArg argn (escaped::xs) =
           (if argn < nregs
             then allocLocal f escaped
             else InFrame ((argn - nregs + argsOffInitial) * WSize))
           :: allocArg (argn+1) xs
-  in {name=name, formals=allocArg 0 formals, actualLocal= #actualLocal f} end
+  in {name=name, origName=origName, formals=allocArg 0 formals,
+      actualLocal= #actualLocal f} end
 
 fun name ({name, ...}: frame) = name
 
@@ -135,19 +138,18 @@ fun procEntryExit2 body =
 
 (* Add instructions to update the SP according to the frame size before and
  * after the function's body *)
-fun procEntryExit3 ({name, actualLocal,...}: frame) body =
+fun procEntryExit3 ({name, origName, actualLocal,...}: frame) body =
      let val size = (!actualLocal) * WSize * ~1
      in concat [
        ".globl "^name^"\n",
-       name ^ ":\n",
-       "pushq %rbp\n",
-       "pushq %rbp\n",
-       "movq %rsp, %rbp\n",
-       "subq $"^Int.toString(size)^" %rsp\n",
+       name ^ ": ; \"" ^ origName ^ "\"\n",
+       "  pushq %rbp\n",
+       "  movq %rsp, %rbp\n",
+       "  subq $"^Int.toString(size)^" %rsp\n",
        body,
-       "movq %rbp %rsp\n",
-       "popq %rbp\n",
-       "ret\n",
+       "  movq %rbp %rsp\n",
+       "  popq %rbp\n",
+       "  ret\n",
        ";-----------\n"]
      end
 end
