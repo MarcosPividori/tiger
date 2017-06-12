@@ -43,17 +43,19 @@ fun main args =
       val _ = transProg expr
       val intermList = trans.getResult()
 
-      fun processString (label, str) = print $ (string label str) ^ "\n"
+      fun processString (label, str) = if code
+              then print $ (string label str) ^ "\n"
+              else ()
 
       fun processProc {frame, body} =
         let val canonizedBody = canonize body
-          val assemLst = concat $ map (procEntryExit2 o codegen frame)
-                                      canonizedBody
+          val assemLst = procEntryExit2 $ concat $
+                          map (codegen frame) canonizedBody
           val (fGraph, nodeLst) = instrs2graph assemLst
           val (iGraph, liveOut) = interferenceGraph fGraph nodeLst
           val (instrLst, allocMap) = alloc assemLst frame
           val codeLst = map
-                (assem.format (fn t => regToString $ dictGet allocMap t))
+                (assem.format (fn t => "%"^(regToString $ dictGet allocMap t)))
                 instrLst
           val _ = if ir then print $ showTree body else ()
           val _ = if canon then
