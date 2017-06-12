@@ -5,7 +5,7 @@ open graph
 open dict
 open temp
 open Splayset
-open List
+open List Listsort
 
 infixr 0 $
 fun x $ y = x y
@@ -176,13 +176,13 @@ fun interferenceGraph {control, def, use, ismove} nodeLst =
  * interference graph, and for each node, a list of nodes adjacent to it. *)
 fun showigraph ({graph, gtemp, tnode, moves}:igraph) = let
       val tmpLst = map (dictGet gtemp) $ nodes graph
-      fun succTmp t = map (dictGet gtemp) $ listItems
-                        $ succ graph $ dictGet tnode t
+      fun succTmp t = sort String.compare $ map (dictGet gtemp) $ listItems
+                                                $ succ graph $ dictGet tnode t
       fun printList [] = ()
         | printList [x] = print x
         | printList (x::xs) = (print x; print ", "; printList xs)
       fun printTmp t = (print t; print " => ";
                         printList $ succTmp t; print "\n")
       val _ = print "Interference graph:\n"
-    in app printTmp tmpLst end
+    in app printTmp $ sort String.compare tmpLst end
 end
