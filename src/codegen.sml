@@ -93,7 +93,7 @@ fun codegen frame (stm: stm) : instr list =
       | munchStm (JUMP _) = raise Fail "Invalid jmp to no label."
 
       | munchStm (CJUMP (oper, e1, e2, l1, l2)) =
-         let val _ = emitOper "cmpq 's1 's0" [munchExp e1, munchExp e2] []
+         let val _ = emitOper "cmpq 's1, 's0" [munchExp e1, munchExp e2] []
          in case oper of
               EQ => emitJmp ("je "^l1) [l1,l2]
             | NE => emitJmp ("jne "^l1) [l1,l2]

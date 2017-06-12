@@ -142,14 +142,14 @@ fun procEntryExit3 ({name, origName, actualLocal,...}: frame) body =
      let val size = (!actualLocal) * WSize * ~1
      in concat [
        ".globl "^name^"\n",
-       name ^ ": ; \"" ^ origName ^ "\"\n",
+       name ^ ": # \"" ^ origName ^ "\"\n",
        "  pushq %rbp\n",
        "  movq %rsp, %rbp\n",
-       "  subq $"^Int.toString(size)^" %rsp\n",
+       "  subq $"^Int.toString(size)^", %rsp\n",
        body,
-       "  movq %rbp %rsp\n",
+       "  movq %rbp, %rsp\n",
        "  popq %rbp\n",
        "  ret\n",
-       ";-----------\n"]
+       "##############\n"]
      end
 end
