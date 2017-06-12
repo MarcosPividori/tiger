@@ -9,7 +9,7 @@ OBJS= $(SRCS:%.sml=%.uo)
 
 .PHONY: all clean depend
 
-all: tiger
+all: tiger runtime.a
 
 clean:
 	$(RM) *.uo
@@ -34,6 +34,12 @@ lexer.sml: lexer.lex
 
 %.uo: %.sml
 	$(MLCOMPILER) $<
+
+%.o: %.c
+	$(CC) -o $@ -c $<
+
+%.a: %.o
+	ar rcs $@ $<
 
 depend: .depend
 .depend: $(SRCS)
