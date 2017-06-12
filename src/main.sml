@@ -8,7 +8,7 @@ open parser
 open regalloc
 open seman
 open show
-open List BasicIO Nonstdio
+open List BasicIO Nonstdio Unix
 
 infixr 0 $
 fun x $ y = x y
@@ -22,23 +22,41 @@ fun lexStream(is: instream) =
 fun main args =
   let
     fun arg l s = (exists (fn x => x = s) l, filter (fn x => x <> s) l)
-    val (ast, l1)     = arg args "-ast"
-    val (escapes, l2) = arg l1 "-escape"
-    val (ir, l3)      = arg l2 "-ir"
-    val (canon, l4)   = arg l3 "-canon"
-    val (code, l5)    = arg l4 "-code"
-    val (flow, l6)    = arg l5 "-flow"
-    val (interf, l7)  = arg l6 "-interf"
-    val (inter, l8)   = arg l7 "-inter"
-    val (entrada, fileName) =
-      case l8 of
+    val (ast, l1)      = arg args "-ast"
+    val (escapes, l2)  = arg l1 "-escape"
+    val (ir, l3)       = arg l2 "-ir"
+    val (canon, l4)    = arg l3 "-canon"
+    val (code, l5)     = arg l4 "-code"
+    val (flow, l6)     = arg l5 "-flow"
+    val (interf, l7)   = arg l6 "-interf"
+    val (inter, l8)    = arg l7 "-inter"
+    val (assembly, l9) = arg l8 "-S"
+
+    fun outputFile [] = (if assembly then "a.s" else "a.out", [])
+      | outputFile ("-o" :: file :: rest) = (file, rest)
+      | outputFile (x::xs) = let val (f, rest) = outputFile xs
+                              in (f, x::rest) end
+
+    val (outFile, l10) = outputFile l9
+
+    val outStream = if code then TextIO.stdOut
+      else if assembly then (TextIO.openOut outFile
+          handle _ => raise Fail $ "Couldn't open output file " ^ outFile ^ "!")
+      else let val gccProc = execute ("/bin/sh", ["-c",
+              "gcc -o " ^ outFile ^ " -x assembler - -x none -ltigerruntime"])
+            in #2 $ streamsOf gccProc end
+
+    val (inStream, fileName) =
+      case l10 of
         [n] => ((open_in n, n) handle _ => raise Fail $ n ^ " doesn't exist!")
       | []  => (std_in, "stdin")
       | _   => raise Fail "unknown option!"
-    fun printOut str = if code then print str else ()
+
+    fun printOut str = (TextIO.output (outStream, str);
+                        TextIO.flushOut outStream)
   in
     let
-      val lexbuf = lexStream entrada
+      val lexbuf = lexStream inStream
       val expr = prog Token lexbuf handle _ => errParsing lexbuf
       val _ = findEscape expr
       val _ = transProg expr
