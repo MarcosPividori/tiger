@@ -25,7 +25,7 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
 
       val registersSet = addList (empty compareRegister, registers)
 
-      fun precoloredNode n = isSome $ dictSearch tempMap $ dictGet gtemp n
+      fun precoloredNode n = isSome $ dictSearch initial $ dictGet gtemp n
 
       fun rmNodeMG mg n = Splayset.foldl (fn (x, mmg) => if degree mmg x = 0
                                                      then rmNode mmg x else mmg)
@@ -52,7 +52,8 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
             fun considerMove st _ []= st
               | considerMove (lst, g, mg) a (b::xs) =
               let val aAndB = union (succ g a, succ g b)
-                  val nIt = length $ List.filter (fn a => degree g a >=colorNum)
+                  val nIt = length $ List.filter (fn a => degree g a >=colorNum
+                                                        orelse precoloredNode a)
                                                  $ listItems aAndB
                in if nIt < colorNum
                    then ((a, b)::lst, coalesceUndEdge g (b, a),
@@ -88,8 +89,7 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
             in loop Coalesce graph1 moveGraph (simLst @ nodeStack) aliases end
         | loop Coalesce graph moveGraph nodeStack aliases =
             let val (coalLst, graph1, moveGraph1) = coalesce graph moveGraph
-              val aliases1 = foldl (fn ((a,b), al) => dictInsert al a b)
-                                   aliases coalLst
+              val aliases1 = coalLst @ aliases
             in case coalLst of
                  [] => loop Freeze graph1 moveGraph1 nodeStack aliases
                | _ => loop Simplify graph1 moveGraph1 nodeStack aliases1
@@ -109,27 +109,19 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
 
       fun tryDelete s e = if member (s, e) then delete (s, e) else s
 
-      fun assignColor graph node2reg [] aliases spilled =
-            let fun recIns [] [] all = all
-                  | recIns [] x all = recIns x [] all
-                  | recIns ((a, b)::xs) l all = case dictSearch all b of
-                      NONE => recIns xs ((a, b)::l) all
-                    | SOME r => recIns xs l $ dictInsert all a r
-            in (recIns (dictToList aliases) [] node2reg, spilled) end
-        | assignColor graph node2reg (x::xs) aliases spilled =
+      fun assignColor graph node2reg aliases spilled [] =
+            let fun addAlias ((a, b), n2r) = dictInsert n2r a $ dictGet n2r b
+            in (foldl addAlias node2reg aliases, spilled) end
+        | assignColor graph node2reg aliases spilled (x::xs) =
             let fun considerNeigh (nod, candidates) =
-                  case dictSearch aliases nod of
-                    SOME al => (case dictSearch node2reg al of
-                          SOME reg => tryDelete candidates reg
-                        | NONE => candidates)
-                  | NONE => (case dictSearch node2reg nod of
-                          SOME reg => tryDelete candidates reg
-                        | NONE => candidates)
+                  case dictSearch node2reg nod of
+                    SOME reg => tryDelete candidates reg
+                  | NONE => candidates
              val cand = Splayset.foldl considerNeigh registersSet $ succ graph x
             in if isEmpty cand
-                then assignColor graph node2reg xs aliases (x::spilled)
+                then assignColor graph node2reg aliases (x::spilled) xs
                 else assignColor graph (dictInsert node2reg x
-                                       $ hd $ listItems cand) xs aliases spilled
+                                       $ hd $ listItems cand) aliases spilled xs
             end
 
       (* moves that could be coalesced *)
@@ -138,15 +130,23 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
       (* graph of the candidate moves *)
       val moveGraph = undGraphFromList candMoves
 
-      val (nodeStack, aliases) =
-            loop Simplify graph moveGraph [] $ dictNew compareNode
+      (* get order for coloring *)
+      val (nodeStack, aliases) = loop Simplify graph moveGraph [] []
 
-      val n2reg = foldl (fn ((a, b), d) => dictInsert d (dictGet tnode a) b)
+      (* apply all the coalesces *)
+      val coalGraph = foldr (fn ((a,b),g) => coalesceUndEdge g (b, a))
+                            graph aliases
+
+      (* convert temp2reg to node2reg *)
+      val n2reg = foldl (fn ((t, reg), d) => dictInsert d (dictGet tnode t) reg)
                         (dictNew compareNode) $ dictToList initial
-      val (node2reg, spilled) = assignColor graph n2reg nodeStack aliases []
 
-      val tmp2reg = foldl (fn ((a, b), d) => dictInsert d (dictGet gtemp a) b)
-                        (dictNewStr()) $ dictToList node2reg
+      (* assign colors following the nodeStack order *)
+      val (node2reg, spilled) = assignColor coalGraph n2reg aliases [] nodeStack
+
+      (* convert node2reg map to temp2reg *)
+      val tmp2reg = foldl (fn ((n, r), d) => dictInsert d (dictGet gtemp n) r)
+                          (dictNewStr()) $ dictToList node2reg
 
 (*
       val _ = showigraph {graph=moveGraph, tnode=tnode, gtemp=gtemp, moves=moves}
