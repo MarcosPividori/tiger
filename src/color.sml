@@ -27,6 +27,10 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
 
       fun precoloredNode n = isSome $ dictSearch tempMap $ dictGet gtemp n
 
+      fun rmNodeMG mg n = Splayset.foldl (fn (x, mmg) => if degree mmg x = 0
+                                                     then rmNode mmg x else mmg)
+                                         (rmNode mg n) $ succ mg n
+
       fun simplify graph nodeStack moveNodSet =
            let fun validNod n = not (member (moveNodSet, n))
                         andalso not (precoloredNode n)
@@ -40,49 +44,40 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
       fun coalesce graph moveGraph = (* Briggs *)
         let fun coalesceMoveGraph g mg (a, b) =
               let val newNeigh = List.filter (fn x => not $ isEdge g (a, x))
-                                             (listItems $ delete (succ mg b, a))
-                  val mg1 = rmNode mg b
-                  val mg2 = foldl (fn (x, mmg) => addUndEdge mmg (a, x))
-                                  mg1 newNeigh
+                                             $ listItems $ delete (succ mg b, a)
+                  val mg1 = foldl (fn (x, mmg) => addUndEdge mmg (a, x))
+                                  mg newNeigh
+                  val mg2 = rmNodeMG mg1 b
                in mg2 end
-            fun considerMove _ [] st = st
-              | considerMove a (b::xs) (lst, g, mg) =
-              let val neighA = succ g a
-                  val neighBNoA = difference (succ g b, neighA)
-                  val aAndB = union (neighA, neighBNoA)
-                  val nIt = length (List.filter (fn a => degree g a >= colorNum)
-                                                (listItems aAndB))
+            fun considerMove st _ []= st
+              | considerMove (lst, g, mg) a (b::xs) =
+              let val aAndB = union (succ g a, succ g b)
+                  val nIt = length $ List.filter (fn a => degree g a >=colorNum)
+                                                 $ listItems aAndB
                in if nIt < colorNum
-                   then ((a,b)::lst, coalesceUndEdge g (b, a),
+                   then ((a, b)::lst, coalesceUndEdge g (b, a),
                          coalesceMoveGraph g mg (b, a))
-                   else considerMove a xs (lst, g, mg) end
-            fun considerMoveNode (n, st as (lst, g, mg)) =
-                  if degree mg n = 0
-                    then (lst, g, rmNode mg n)
-                    else if precoloredNode n
-                           then st
-                           else considerMove n (listItems (succ mg n)) st
-        in foldl considerMoveNode ([], graph, moveGraph) (nodes moveGraph) end
+                   else considerMove (lst, g, mg) a xs end
+            fun considerMoveNode (n, st as (lst, g, mg)) = if isNode mg n
+                    then considerMove st n $ listItems $ succ mg n
+                    else st
+        in foldl considerMoveNode ([], graph, moveGraph)
+                      $ List.filter (not o precoloredNode) $ nodes moveGraph end
 
       fun freeze graph moveGraph =
         case List.filter (fn n => degree graph n < colorNum
                                   andalso not $ precoloredNode n)
                          $ nodes moveGraph of
           [] => ([], graph, moveGraph)
-        | (x::_) => let
-             val succX = succ moveGraph x
-             val (g, mg) = (rmNode graph x, rmNode moveGraph x)
-             val mg1 = Splayset.foldl (fn (y, mgg) => if degree mgg y = 0
-                                                       then rmNode mgg y
-                                                       else mgg) mg succX
-           in ([x], g, mg1) end
+        | (x::_) => let val (g, mg) = (rmNode graph x, rmNodeMG moveGraph x)
+                     in ([x], g, mg) end
 
       (* TODO: use spillCost *)
       fun posSpill graph moveGraph = case (List.filter (not o precoloredNode)
                                                        $ nodes graph) of
             [] => ([], graph, moveGraph)
           | (x::_) => ([x], rmNode graph x, if isNode moveGraph x
-                                              then rmNode moveGraph x
+                                              then rmNodeMG moveGraph x
                                               else moveGraph)
 
       datatype ST = Simplify | Coalesce | Freeze | PosSpill
