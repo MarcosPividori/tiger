@@ -67,7 +67,7 @@ int64_t* _allocArray(int64_t size, int64_t init) {
 
 void _checkIndex(int64_t* a, int64_t i) {
   if (i < 0 || i >= a[-1]) {
-    fprintf(stderr, "index %d out of range!\n", i);
+    fprintf(stderr, "index %ld out of range!\n", i);
     exit(-1);
   }
 }
@@ -121,7 +121,7 @@ int64_t ord(String* s) {
 
 String* chr(int64_t i) {
   if (i < 0 || i >= 256) {
-    fprintf(stderr, "chr(%d) out of range\n", i);
+    fprintf(stderr, "chr(%ld) out of range\n", i);
     exit(-1);
   }
   return (String*)(consts + i);
@@ -133,7 +133,7 @@ int64_t size(String* s) {
 
 String* substring(String* s, int64_t first, int64_t n) {
   if (first < 0 || first + n > s->length) {
-    printf("substring([%d], %d, %d) out of range\n", s->length, first, n);
+    printf("substring([%ld], %ld, %ld) out of range\n", s->length, first, n);
     exit(1);
   }
   if (n == 1)
@@ -176,6 +176,8 @@ String* getstr() {
   else
     return (String*)(consts + i);
 }
+
+int _tigermain(int);
 
 int main() {
   int i;
