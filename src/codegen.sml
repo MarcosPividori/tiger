@@ -78,10 +78,14 @@ fun codegen frame (stm: stm) : instr list =
 
       (* function call. *)
       | munchStm (EXP (CALL (NAME n, args))) =
-          let val _ = emitOper ("call "^n) (munchArgs args) calldefs
-            val diff = length args - length argregs
+          let val diffTmp = length args - length argregs
+            (* diff * 8 must be 16byte aligned. *)
+            val diff = if diffTmp mod 2 = 0 orelse diffTmp < 0
+                  then diffTmp
+                  else (emitOper "pushq $0" [] []; diffTmp + 1)
+            val _ = emitOper ("call "^n) (munchArgs args) calldefs
           in if diff > 0
-               then emitOper ("addq $"^(st diff)^", 'd0") [] [SP]
+               then emitOper ("addq $"^(st diff)^", 'd0") [] []
                else ()
           end
       | munchStm (EXP (CALL _)) = raise Fail "Invalid call with no label."

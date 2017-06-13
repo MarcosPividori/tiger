@@ -139,7 +139,12 @@ fun procEntryExit2 body =
 (* Add instructions to update the SP according to the frame size before and
  * after the function's body *)
 fun procEntryExit3 ({name, origName, actualLocal,...}: frame) body =
-     let val size = (!actualLocal) * WSize * ~1
+     (* rsp must be aligned to 16 bytes before making a call. As the call instr
+      * pushes the return address (8 bytes), and we then push the rbp (8 bytes)
+      * we know that rsp is 16 bytes aligned. So if we are going to allocate
+      * space in the stack, it must be of the form: i * 16. *)
+     let val sizeTmp = (!actualLocal) * WSize * ~1
+       val size = if sizeTmp mod 16 = 0 then sizeTmp else sizeTmp + WSize
      in concat [
        ".globl "^name^"\n",
        name ^ ": # \"" ^ origName ^ "\"\n",
