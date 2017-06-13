@@ -134,7 +134,7 @@ fun procEntryExit1 ({formals, ...}: frame) body = let
 fun procEntryExit2 body =
      [assem.AOPER {assem="", src=[], dst=[SP, FP] @ calleesaves, jump=[]}] @
      body @
-     [assem.AOPER {assem="", src=[SP, FP, RV] @ calleesaves, dst=[], jump=[]}]
+     [assem.AOPER {assem="", src=[SP, FP] @ calleesaves, dst=[], jump=[]}]
 
 (* Add instructions to update the SP according to the frame size before and
  * after the function's body *)

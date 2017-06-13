@@ -1,4 +1,5 @@
 structure liveness :> liveness = struct
+local
 
 open assem
 open graph
@@ -9,6 +10,14 @@ open List Listsort
 
 infixr 0 $
 fun x $ y = x y
+
+fun printList [] = ()
+  | printList [x] = print x
+  | printList (x::xs) = (print x; print ", "; printList xs)
+
+fun printSList xs = printList $ sort String.compare xs
+
+in
 
 (* type to represent flow graphs *)
 type flowgraph = {
@@ -80,17 +89,14 @@ fun instrs2graph instrLst =
 (* showfgraph just prints out, for debugging purposes, a list of nodes in the
  * flow graph, and for each node, a list of nodes adjacent to it. *)
 fun showfgraph ({control, def, use, ismove}:flowgraph) instrList nodeLst = let
-      fun printList [] = ()
-        | printList [x] = print x
-        | printList (x::xs) = (print x; print ", "; printList xs)
       val listInstrNode = ListPair.zip (instrList, nodeLst)
       fun printInstr (inst, nod) = let
             val suc = map nodeToString $ listItems $ succ control nod
              in (print $ nodeToString nod; print ": ";
                  print $ assem.format (fn n => n) inst;
-                 print "  => "; printList suc;
-                 print "  (use: "; printList $ dictGet use nod;
-                 print " def: "; printList $ dictGet def nod;
+                 print "  => "; printSList suc;
+                 print "  (use: "; printSList $ dictGet use nod;
+                 print " def: "; printSList $ dictGet def nod;
                  print " ismove: ";
                  print $ (Bool.toString $ dictGet ismove nod) ^ ") \n") end
       val _ = print "Flow graph:\n"
@@ -178,11 +184,10 @@ fun showigraph ({graph, gtemp, tnode, moves}:igraph) = let
       val tmpLst = map (dictGet gtemp) $ nodes graph
       fun succTmp t = sort String.compare $ map (dictGet gtemp) $ listItems
                                                 $ succ graph $ dictGet tnode t
-      fun printList [] = ()
-        | printList [x] = print x
-        | printList (x::xs) = (print x; print ", "; printList xs)
       fun printTmp t = (print t; print " => ";
-                        printList $ succTmp t; print "\n")
+                        printSList $ succTmp t; print "\n")
       val _ = print "Interference graph:\n"
     in app printTmp $ sort String.compare tmpLst end
+
+end
 end

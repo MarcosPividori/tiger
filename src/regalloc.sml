@@ -11,9 +11,11 @@ open liveness
 open temp
 
 fun addSpill frame instrLst spillLst = let
-      fun acc lst = foldl (fn (tmp, d) => dictInsert d tmp
-                                          (newTemp(), allocLocal frame true))
-                          (dictNewStr()) lst
+      fun newTemps lst = foldl (fn (tmp, d) => dictInsert d tmp (newTemp()))
+                               (dictNewStr()) lst
+
+      val acc = foldl (fn (tmp, d) => dictInsert d tmp (allocLocal frame true))
+                      (dictNewStr()) spillLst
 
       fun intersec [] _ = []
         | intersec _ [] = []
@@ -23,42 +25,42 @@ fun addSpill frame instrLst spillLst = let
       fun replace d [] = []
         | replace d (x::xs) = case dictSearch d x of
             NONE => x :: replace d xs
-          | SOME (t,_) => t :: replace d xs
+          | SOME t => t :: replace d xs
 
       fun store [] _ = []
-        | store (d::dd) accDst = case dictGet accDst d of
+        | store (d::dd) tmpsDst = case (dictGet tmpsDst d, dictGet acc d) of
             (t, InFrame off) => codegen frame
                   (MOVE (MEM (BINOP (PLUS, CONST off, TEMP FP)), TEMP t))
-                @ store dd accDst
+                @ store dd tmpsDst
           | _ => raise Fail "Never happen"
 
       fun load [] _ = []
-        | load (s::ss) accSrc = case dictGet accSrc s of
+        | load (s::ss) tmpsSrc = case (dictGet tmpsSrc s, dictGet acc s) of
             (t, InFrame off) => codegen frame
                   (MOVE (TEMP t, MEM (BINOP (PLUS, CONST off, TEMP FP))))
-                @ load ss accSrc
+                @ load ss tmpsSrc
           | _ => raise Fail "Never happen"
 
       fun update [] = []
         | update (AOPER {assem, src, dst, jump} ::xs) = let
             val srcInt = intersec spillLst src
-            val accSrc = acc srcInt
+            val tmpsSrc = newTemps srcInt
             val dstInt = intersec spillLst dst
-            val accDst = acc dstInt
-          in load srcInt accSrc @
-             [AOPER {assem=assem, src=replace accSrc src,
-                    dst=replace accDst dst, jump=jump}] @
-             store dstInt accDst @ update xs
+            val tmpsDst = newTemps dstInt
+          in load srcInt tmpsSrc @
+             [AOPER {assem=assem, src=replace tmpsSrc src,
+                     dst=replace tmpsDst dst, jump=jump}] @
+             store dstInt tmpsDst @ update xs
           end
         | update (AMOVE {assem, src, dst} ::xs) = let
             val srcInt = intersec spillLst [src]
-            val accSrc = acc srcInt
+            val tmpsSrc = newTemps srcInt
             val dstInt = intersec spillLst [dst]
-            val accDst = acc dstInt
-          in load srcInt accSrc @
-             [AMOVE {assem=assem, src=hd (replace accSrc [src]),
-                    dst=hd (replace accDst [dst])}] @
-             store dstInt accDst @ update xs
+            val tmpsDst = newTemps dstInt
+          in load srcInt tmpsSrc @
+             [AMOVE {assem=assem, src=hd (replace tmpsSrc [src]),
+                     dst=hd (replace tmpsDst [dst])}] @
+             store dstInt tmpsDst @ update xs
           end
         | update ((l as ALABEL {assem, lab}) ::xs) = l :: update xs
     in

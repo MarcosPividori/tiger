@@ -39,18 +39,18 @@ fun main args =
 
     val (outFile, l10) = outputFile l9
 
+    val (inStream, fileName) =
+      case l10 of
+        [n] => ((open_in n, n) handle _ => raise Fail $ n ^ " doesn't exist!")
+      | []  => (std_in, "stdin")
+      | _   => raise Fail "unknown option!"
+
     val outStream = if code then TextIO.stdOut
       else if assembly then (TextIO.openOut outFile
           handle _ => raise Fail $ "Couldn't open output file " ^ outFile ^ "!")
       else let val gccProc = execute ("/bin/sh", ["-c",
               "gcc -o " ^ outFile ^ " -x assembler - -x none -ltigerruntime"])
             in #2 $ streamsOf gccProc end
-
-    val (inStream, fileName) =
-      case l10 of
-        [n] => ((open_in n, n) handle _ => raise Fail $ n ^ " doesn't exist!")
-      | []  => (std_in, "stdin")
-      | _   => raise Fail "unknown option!"
 
     fun printOut str = (TextIO.output (outStream, str);
                         TextIO.flushOut outStream)
