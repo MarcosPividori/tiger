@@ -12,6 +12,20 @@ local
               in if n < 0 then "-" ^ String.extract(str, 1, NONE) else str end
 
   fun withTmp gen = let val t = temp.newTemp() in gen t; t end
+
+  (* checks if the number is in the range of 32bit signed integers *)
+  val two31 = let fun f x n = if n = 32 then x else f (x * x) (2 * n)
+               in (f 2 1) div 2 end
+  val max32int = two31 - 1
+  val min32int = ~ two31
+  fun is32b n = n >= min32int andalso n <= max32int
+
+  fun mapExp f (MOVE (e1, e2)) = MOVE (f e1, f e2)
+    | mapExp f (EXP e1) = EXP $ f e1
+    | mapExp f (JUMP (e1, l)) = JUMP (f e1, l)
+    | mapExp f (CJUMP (r, e1, e2, l1, l2)) = CJUMP (r, f e1, f e2, l1, l2)
+    | mapExp f (SEQ (st1, st2)) = SEQ (mapExp f st1, mapExp f st2)
+    | mapExp f (LABEL l) = LABEL l
 in
 
 fun codegen frame (stm: stm) : instr list =
@@ -21,6 +35,17 @@ fun codegen frame (stm: stm) : instr list =
             emit $ AOPER {assem=assem, src=src, dst=dst, jump=[]}
     fun emitJmp assem labels =
             emit $ AOPER {assem=assem, src=[], dst=[], jump=labels}
+
+    (* rplConst ensures all const are 32bit signed integers, because for x64
+     * immediate operands can only be 32b, except for move op into a reg. *)
+    fun rplConst (CONST i) = if is32b i
+          then CONST i
+          else TEMP $ withTmp (fn t => emitOper ("movq $"^st i^", 'd0") [] [t])
+      | rplConst (BINOP (b, e1, e2)) = BINOP (b, rplConst e1, rplConst e2)
+      | rplConst (MEM e) = MEM $ rplConst e
+      | rplConst (CALL (e, el)) = CALL (rplConst e, map rplConst el)
+      | rplConst e = e
+
     (* munchArgs: Tree.exp list -> Temp.temp list
      * Push all the argument to the registers and the stack according to the
      * calling convention. *)
@@ -170,7 +195,7 @@ fun codegen frame (stm: stm) : instr list =
       | munchExp (CALL _) = raise Fail "CALL shouldn't appear after canon."
       | munchExp (NAME n) = withTmp (fn r => munchStm $ MOVE (TEMP r, NAME n))
       | munchExp (ESEQ _) = raise Fail "ESEQ shouldn't appear after canon."
-  in munchStm stm;
+  in munchStm $ mapExp rplConst stm;
      rev $ !ilist
   end
 
