@@ -34,15 +34,15 @@ fun codegen frame (stm: stm) : instr list =
           and munchArgsStack [] = []
             | munchArgsStack (x::xs) =
                 let val _ = case x of
-                    CONST i => emitOper ("pushq $"^(st i)) [] [SP]
-                  | NAME n => emitOper ("pushq "^n) [] [SP]
-                  | TEMP t => emitOper "pushq 's0" [t] [SP]
+                    CONST i => emitOper ("pushq $"^(st i)) [] []
+                  | NAME n => emitOper ("pushq "^n) [] []
+                  | TEMP t => emitOper "pushq 's0" [t] []
                   (* Shouldn't happen because of the definition of callExp. *)
-                  | MEM (TEMP t) => emitOper "pushq ('s0)" [t] [SP]
+                  | MEM (TEMP t) => emitOper "pushq ('s0)" [t] []
                   | MEM (BINOP (PLUS, e, CONST c)) =>
-                        emitOper ("pushq "^(st c)^"('s0)") [munchExp e] [SP]
-                  | MEM e => emitOper "pushq ('s0)" [munchExp e] [SP]
-                  | _ => emitOper "pushq 's0" [munchExp x] [SP]
+                        emitOper ("pushq "^(st c)^"('s0)") [munchExp e] []
+                  | MEM e => emitOper "pushq ('s0)" [munchExp e] []
+                  | _ => emitOper "pushq 's0" [munchExp x] []
                 in munchArgsStack xs end
         in munchArgsReg args argregs end
 
