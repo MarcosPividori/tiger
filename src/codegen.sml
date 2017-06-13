@@ -160,18 +160,9 @@ fun codegen frame (stm: stm) : instr list =
 
       | munchExp (BINOP (DIV, e1, e2)) = withTmp (fn r =>
           (munchStm $ MOVE (TEMP RAX, e1);
-           emitOper "cdq" [RAX] [RDX];
-           case e1 of
-             CONST i => emitOper ("idivq $"^(st i)) [RAX, RDX] [RAX, RDX]
-           | TEMP t => emitOper "idivq 's2" [RAX, RDX, t] [RAX, RDX]
-           | MEM (TEMP t) => emitOper "idivq ('s2)" [RAX, RDX, t] [RAX, RDX]
-           | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emitOper ("idivq "^(st i)^"('s2)") [RAX, RDX, t] [RAX, RDX]
-           | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emitOper ("idivq "^(st i)^"('s2)") [RAX, RDX, t] [RAX, RDX]
-           | MEM e => emitOper "idivq ('s2)" [RAX, RDX, munchExp e] [RAX, RDX]
-           | _ => emitOper "idivq 's2" [RAX, RDX, munchExp e1] [RAX, RDX];
-          munchStm $ MOVE (TEMP r, TEMP RAX)))
+           emitOper "cqo" [RAX] [RDX]; (* sign extension. *)
+           emitOper "idivq 's2" [RAX, RDX, munchExp e2] [RAX, RDX];
+           munchStm $ MOVE (TEMP r, TEMP RAX)))
 
       | munchExp (BINOP _) = raise Fail "Binary operator not supported."
 
