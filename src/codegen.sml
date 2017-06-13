@@ -170,24 +170,34 @@ fun codegen frame (stm: stm) : instr list =
            | _ => emitOper "subq 's1, 'd0" [r, munchExp e2] [r]))
 
       | munchExp (BINOP (MUL, e1, e2)) = withTmp (fn r =>
-          (munchStm $ MOVE (TEMP RAX, e2);
-           case e1 of
-             CONST i => emitOper ("imulq $"^(st i)^", 's0") [RAX] [RAX, RDX]
-           | TEMP t => emitOper "imulq 's1, 's0" [RAX, t] [RAX, RDX]
-           | MEM (TEMP t) => emitOper "imulq ('s1), 's0" [RAX, t] [RAX, RDX]
-           | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
-                 emitOper ("imulq "^(st i)^"('s1), 's0") [RAX, t] [RAX, RDX]
-           | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
-                 emitOper ("imulq "^(st i)^"('s1), 's0") [RAX, t] [RAX, RDX]
-           | MEM e => emitOper "imulq ('s1), 's0" [RAX, munchExp e] [RAX, RDX]
-           | _ => emitOper "imulq 's1, 's0" [RAX, munchExp e1] [RAX, RDX];
-          munchStm $ MOVE (TEMP r, TEMP RAX)))
+          let val e11 = case e1 of
+                  CONST i => e1
+                | TEMP t => e1
+                | MEM (TEMP t) => e1
+                | MEM (BINOP (PLUS, CONST i, TEMP t)) => e1
+                | MEM (BINOP (PLUS, TEMP t, CONST i)) => e1
+                | MEM e => MEM $ TEMP $ munchExp e
+                | _ => TEMP $ munchExp e1
+          in (munchStm $ MOVE (TEMP RAX, e2);
+             case e11 of
+               CONST i => emitOper ("imulq $"^(st i)^", 's0") [RAX] [RAX, RDX]
+             | TEMP t => emitOper "imulq 's1, 's0" [RAX, t] [RAX, RDX]
+             | MEM (TEMP t) => emitOper "imulq ('s1), 's0" [RAX, t] [RAX, RDX]
+             | MEM (BINOP (PLUS, CONST i, TEMP t)) =>
+                   emitOper ("imulq "^(st i)^"('s1), 's0") [RAX, t] [RAX, RDX]
+             | MEM (BINOP (PLUS, TEMP t, CONST i)) =>
+                   emitOper ("imulq "^(st i)^"('s1), 's0") [RAX, t] [RAX, RDX]
+             | _ => raise Fail "Unexpected patt maching failure.";
+              munchStm $ MOVE (TEMP r, TEMP RAX))
+          end)
 
       | munchExp (BINOP (DIV, e1, e2)) = withTmp (fn r =>
-          (munchStm $ MOVE (TEMP RAX, e1);
-           emitOper "cqo" [RAX] [RDX]; (* sign extension. *)
-           emitOper "idivq 's2" [RAX, RDX, munchExp e2] [RAX, RDX];
-           munchStm $ MOVE (TEMP r, TEMP RAX)))
+          let val tE2 = munchExp e2
+          in munchStm $ MOVE (TEMP RAX, e1);
+             emitOper "cqo" [RAX] [RDX]; (* sign extension. *)
+             emitOper "idivq 's2" [RAX, RDX, tE2] [RAX, RDX];
+             munchStm $ MOVE (TEMP r, TEMP RAX)
+          end)
 
       | munchExp (BINOP _) = raise Fail "Binary operator not supported."
 
