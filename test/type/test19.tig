@@ -1,4 +1,4 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 /* error : second function uses variables local to the first one, undeclared variable */
 let
 

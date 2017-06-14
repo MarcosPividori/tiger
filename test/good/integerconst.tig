@@ -1,4 +1,4 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP: "Successful" */
 let
  var num := 1000000000000 + 1
 

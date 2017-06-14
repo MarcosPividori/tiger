@@ -1,4 +1,4 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 /* error : definition of recursive types is interrupted */
 let
    /* define a tree */

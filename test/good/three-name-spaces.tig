@@ -1,4 +1,4 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP: "Successful" */
 let type a = {a : int}
     var  a := 0
     function a (a : a) : a = a{a = a.a}

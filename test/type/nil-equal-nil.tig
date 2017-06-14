@@ -1,2 +1,2 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 nil = nil

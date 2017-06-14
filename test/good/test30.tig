@@ -1,4 +1,4 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP: "Successful" */
 /* synonyms are fine */
 
 let

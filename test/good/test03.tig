@@ -1,4 +1,4 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP: "Successful" */
 /* a record type and a record variable */
 let
   type  rectype = {name : string, age : int}

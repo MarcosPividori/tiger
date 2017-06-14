@@ -1,4 +1,4 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 /* error : variable not record */
 let 
 	var d :=0

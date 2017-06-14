@@ -1,4 +1,4 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 /* error : type mismatch */
 
 let 

@@ -1,4 +1,4 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP: "Successful" */
 /* valid nil initialization and assignment */
 let 
 

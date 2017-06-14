@@ -1,4 +1,4 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 /* error : formals and actuals have different types */
 let
 	function g (a : int , b : string) : int = a

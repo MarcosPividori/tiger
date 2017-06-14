@@ -1,4 +1,4 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP/COMP: "Successful" */
 /* valid rec comparisons */
 let 
 	type rectype = {name : string, id : int}

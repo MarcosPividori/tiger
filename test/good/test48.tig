@@ -1,4 +1,4 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP: "Successful" */
 /* This is legal.  The second function "g" simply hides the first one.
    Because of the intervening variable declaration, the two "g" functions
    are not in the same  batch of mutually recursive functions. 

@@ -1,4 +1,4 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 /* error : procedure returns value  and procedure is used in arexpr */
 let
   /* calculate n! */

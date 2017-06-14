@@ -1,4 +1,4 @@
-/* EXPECTED: "Error" */
+/* EXPECTED-COMP: "Error" */
 /* error : mutually recursive types thet do not pass through record or array */
 let 
 

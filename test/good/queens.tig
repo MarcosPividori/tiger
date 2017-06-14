@@ -1,4 +1,5 @@
-/* EXPECTED: "Successful" */
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => ". . . O . . . ." */
 /* A program to solve the 8-queens problem */
 
 let
