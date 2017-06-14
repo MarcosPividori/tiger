@@ -1,0 +1,54 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "11" */
+let
+
+function printInt (i : int) =
+  let function f (i : int) =
+    if i > 0
+      then (f (i/10); print (chr (i-i/10*10+ord ("0"))))
+  in if i < 0 then (print ("-"); f (-i))
+     else if i>0 then f (i)
+     else print ("0")
+  end
+
+function f1() =
+  let var v1 := 1
+    function f2() =
+      let var v2 := 1
+        function f3() =
+          let var v3 := 1
+            function f4() =
+              let var v4 := 1
+                function f5() =
+                  let var v5 := 1
+                    function f6() =
+                      let var v6 := 1
+                        function f7() =
+                          let var v7 := 1
+                            function f8() =
+                              let var v8 := 1
+                                function f9() =
+                                  let var v9 := 1
+                                    function f10() =
+                                      let var v10 := 1
+                                        function f11() =
+                                          let var v11 := 1
+                                            var total := (v1+v2+v3+v4+v5+v6
+                                                          +v7+v8+v9+v10+v11)
+                                          in printInt(total) end
+                                      in f11() end
+                                  in f10() end
+                              in f9() end
+                          in f8() end
+                      in f7() end
+                  in f6() end
+              in f5() end
+          in f4() end
+      in f3() end
+  in f2() end
+
+in
+
+f1();0
+
+end
