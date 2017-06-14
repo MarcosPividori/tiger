@@ -22,3 +22,7 @@ To run the tests:
 ```
 make test
 ```
+
+The runtime library: "libtigerruntime.a", must be moved to a standard location,
+so the linker can find it. The easy solution is to add the "build" directory to
+the list of dirs in "LIBRARY_PATH".
