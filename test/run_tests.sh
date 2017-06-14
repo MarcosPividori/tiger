@@ -26,5 +26,6 @@ do
       else echo "${RED}FAIL (Cmd: \"$RUN\" Expected: \"$CHECK\")${NC}"
     fi
   done
-
 done
+
+rm -f ./a.out
