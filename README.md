@@ -16,3 +16,9 @@ make all
 ```
 
 It will build the project "out of source" in a new directory: "build".
+
+To run the tests:
+
+```
+make test
+```
