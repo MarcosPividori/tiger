@@ -1,0 +1,8 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" "out of range" */
+let
+	type arrtype = array of int
+	var arr : arrtype := arrtype [10] of 0
+in
+	arr[10]; 0
+end

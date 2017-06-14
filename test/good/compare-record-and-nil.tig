@@ -1,6 +1,6 @@
-/* EXPECTED-COMP/COMP: "Successful" */
+/* EXPECTED-COMP: "Successful" */
 /* valid rec comparisons */
-let 
+let
 	type rectype = {name : string, id : int}
 	var b : rectype := nil
 in

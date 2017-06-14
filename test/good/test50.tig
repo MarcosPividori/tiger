@@ -1,4 +1,9 @@
 /* EXPECTED-COMP: "Successful" */
-(while 1
-do
-  if 1 then break; 0)
+/* EXPECTED-RUN: "./a.out" => "before-break" */
+let var a := "before-break"
+in
+while 1 do
+ (if 1 then break; a:= "after-break");
+print(a);
+0
+end

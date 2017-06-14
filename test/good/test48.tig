@@ -1,12 +1,13 @@
 /* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "second-def" */
 /* This is legal.  The second function "g" simply hides the first one.
    Because of the intervening variable declaration, the two "g" functions
-   are not in the same  batch of mutually recursive functions. 
+   are not in the same  batch of mutually recursive functions.
    See also test39 */
 let
-	function g (a : int) : int = a
+	function g (a : int) : int = (print("first-def"); a)
 	type t = int
-	function g (a : int) : int = a
+	function g (a : int) : int = (print("second-def"); a)
 in
-	0
+	g(0); 0
 end

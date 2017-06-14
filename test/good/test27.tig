@@ -1,9 +1,10 @@
 /* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "second" */
 /* locals hide globals */
 let
-	var a :=0
+	var a := "first"
 
-	function g (a : int) : int = a 
+	function g (a : string) = print(a)
 in
- g (2)
+ g ("second"); 0
 end

@@ -1,12 +1,8 @@
 /* EXPECTED-COMP: "Successful" */
-/* valid nil initialization and assignment */
+/* EXPECTED-RUN: "./a.out" "Nil!" */
 let
-
 	type rectype = {name : string, id : int}
 	var b : rectype := nil
-
 in
-
-	b := nil; 0
-
+	b.name; 0
 end

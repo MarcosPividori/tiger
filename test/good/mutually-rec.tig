@@ -1,0 +1,22 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "echo 1 | ./a.out" "it" */
+/* EXPECTED-RUN: "echo 3 | ./a.out" "it,it,it" */
+/* EXPECTED-RUN: "echo 5 | ./a.out" "it,it,it,it,it" */
+/* define valid mutually recursive functions */
+let
+
+function do_a (a : int, b : string) : string =
+		 if a > 0
+       then concat (do_b (a - 1, b), b)
+       else ""
+
+function do_b (a : int, b : string) : string =
+		 if a > 0
+       then concat (do_a (a , b), ",")
+       else ""
+
+var n := ord(getchar()) - ord("0")
+in
+	print (do_a (n, "it")); 0
+end
+
