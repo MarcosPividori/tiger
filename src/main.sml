@@ -29,31 +29,21 @@ fun main args =
     val (code, l5)     = arg l4 "-code"
     val (flow, l6)     = arg l5 "-flow"
     val (interf, l7)   = arg l6 "-interf"
-    val (inter, l8)    = arg l7 "-inter"
-    val (assembly, l9) = arg l8 "-S"
+    val (assembly, l8) = arg l7 "-S"
 
     fun outputFile [] = (if assembly then "a.s" else "a.out", [])
       | outputFile ("-o" :: file :: rest) = (file, rest)
       | outputFile (x::xs) = let val (f, rest) = outputFile xs
                               in (f, x::rest) end
 
-    val (outFile, l10) = outputFile l9
+    val (outFile, l9) = outputFile l8
 
     val (inStream, fileName) =
-      case l10 of
+      case l9 of
         [n] => ((open_in n, n) handle _ => raise Fail $ n ^ " doesn't exist!")
       | []  => (std_in, "stdin")
       | _   => raise Fail "unknown option!"
 
-    val outStream = if code then TextIO.stdOut
-      else if assembly then (TextIO.openOut outFile
-          handle _ => raise Fail $ "Couldn't open output file " ^ outFile ^ "!")
-      else let val gccProc = execute ("/bin/sh", ["-c",
-              "gcc -o " ^ outFile ^ " -x assembler - -x none -ltigerruntime"])
-            in #2 $ streamsOf gccProc end
-
-    fun printOut str = (TextIO.output (outStream, str);
-                        TextIO.flushOut outStream)
   in
     let
       val lexbuf = lexStream inStream
@@ -61,6 +51,23 @@ fun main args =
       val _ = findEscape expr
       val _ = transProg expr
       val intermList = trans.getResult()
+
+      val (outStream, closeOutStream) =
+        let fun nothing () = ()
+        in if code then (TextIO.stdOut, nothing)
+           else if assembly then ((TextIO.openOut outFile, nothing)  handle _ =>
+                      raise Fail $ "Couldn't open output file " ^ outFile ^ "!")
+           else let val gccProc = execute ("/bin/sh", ["-c",
+                "gcc -o " ^ outFile ^ " -x assembler - -x none -ltigerruntime"])
+                  val (gccOut, gccIn) = streamsOf gccProc
+                  fun finish () = (TextIO.closeOut gccIn;
+                                   if OS.Process.isSuccess $ reap gccProc
+                                   then () else raise Fail $ "Assembler error.")
+                in (gccIn, finish) end
+        end
+
+      fun printOut str = (TextIO.output (outStream, str);
+                          TextIO.flushOut outStream)
 
       fun processString (label, str) = printOut $ (string label str) ^ "\n"
 
@@ -91,6 +98,7 @@ fun main args =
       val _ = app processProc procLst
 
       val _ = if ast then printAst expr else ()
+      val _ = closeOutStream ()
     in
       printStderr "Successful compilation\n"
     end handle Error (line, msg) => printErrorMsg (SOME fileName) line msg
