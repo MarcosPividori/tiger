@@ -23,17 +23,7 @@ local
       (* determines if the given stmt s commutes with the given expression e,
        * that means is the same to execute s before or after evaluating e *)
       fun commute (EXP (CALL (NAME "_checkIndexArray", _))) _ = true
-            (* Not sure about the correctness of this commute...
-             * for example: i:=10; (i:=0; 1) + (checkIdx a i; a[i])
-             * is not the same than:
-             *              i:=10; checkIdx a i; (i:=0; 1) + (a[i])
-             *)
         | commute (EXP (CALL (NAME "_checkNil", _))) _ = true
-            (* Not sure about the correctness of this commute...
-             * for example: r:=nil; (r:={a=1}; 1) + (checkNil r; r.a)
-             * is not the same than:
-             *              r:=nil; checkNil r; (r:={a=1}; 1) + (r.a)
-             *)
         | commute (EXP x) y =
             let fun immut (NAME _) = true
                   | immut (CONST _) = true
