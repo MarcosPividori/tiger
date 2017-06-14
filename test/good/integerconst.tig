@@ -1,6 +1,6 @@
 /* EXPECTED: "Successful" */
 let
- var num := 1 + 1000000000000
+ var num := 1000000000000 + 1
 
  function printint (i : int) =
    let function f (i : int) =
