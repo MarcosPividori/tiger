@@ -1,0 +1,91 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "120 5 3 2 9 360360 24 10 360600 115" */
+let
+  function f(v1:int,v2:int,v3:int,v4:int,v5:int,
+             v6:int,v7:int,v8:int,v9:int,v10:int,
+             v11:int,v12:int,v13:int,v14:int,v15:int) =
+    let
+      function printInt(n:int) = (printint(n);print(" "))
+      var fact5 := v1 * v2 * v3 * v4 * v5 /* 120 */
+      var div1 := v10 / 2 /* 5 */
+      var div2 := v9 / 3 /* 3 */
+      var diff := v8 - v6 /* 2 */
+      var sum := v7 + diff /* 9 */
+      var prod := v11 * v12 * v13 * v14 * v15 /* 360360 */
+
+      var res1 := fact5 / div1 /* 24 */
+      var res2 := sum + div2 - diff /* 10 */
+      var res := res1 * res2 + prod /* 360600 */
+      var a1 := 1
+      var a2 := 2
+      var a3 := 3
+      var a4 := 4
+      var a5 := 1
+      var a6 := 2
+      var a7 := 3
+      var a8 := 4
+      var a9 := 1
+      var a0 := 2
+
+      var a11 := 1
+      var a12 := 2
+      var a13 := 3
+      var a14 := 4
+      var a15 := 1
+      var a16 := 2
+      var a17 := 3
+      var a18 := 4
+      var a19 := 1
+      var a10 := 2
+
+      var a21 := 1
+      var a22 := 2
+      var a23 := 3
+      var a24 := 4
+      var a25 := 1
+      var a26 := 2
+      var a27 := 3
+      var a28 := 4
+      var a29 := 1
+      var a20 := 2
+
+      var a31 := 1
+      var a32 := 2
+      var a33 := 3
+      var a34 := 4
+      var a35 := 1
+      var a36 := 2
+      var a37 := 3
+      var a38 := 4
+      var a39 := 1
+      var a30 := 2
+
+      var a41 := 1
+      var a42 := 2
+      var a43 := 3
+      var a44 := 4
+      var a45 := 1
+      var a46 := 2
+      var a47 := 3
+      var a48 := 4
+      var a49 := 1
+      var a40 := 2
+    in
+      printInt(fact5);
+      printInt(div1);
+      printInt(div2);
+      printInt(diff);
+      printInt(sum);
+      printInt(prod);
+      printInt(res1);
+      printInt(res2);
+      printInt(res);
+      printInt(a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 +
+               a10 + a11 + a12 + a13 + a14 + a15 + a16 + a17 + a18 + a19 +
+               a20 + a21 + a22 + a23 + a24 + a25 + a26 + a27 + a28 + a29 +
+               a30 + a31 + a32 + a33 + a34 + a35 + a36 + a37 + a38 + a39 +
+               a40 + a41 + a42 + a43 + a44 + a45 + a46 + a47 + a48 + a49)
+    end
+in
+  f(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);0
+end
