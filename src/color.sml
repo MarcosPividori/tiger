@@ -31,6 +31,12 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
                                                      then rmNode mmg x else mmg)
                                          (rmNode mg n) $ succ mg n
 
+      fun rmEdgeMG mg (a, b) =
+            let val mg1 = rmUndEdge mg (a, b)
+              val mg2 = if degree mg1 a = 0 then rmNode mg1 a else mg1
+              val mg3 = if degree mg2 b = 0 then rmNode mg2 b else mg2
+            in mg3 end
+
       fun simplify graph nodeStack moveNodSet =
            let fun validNod n = not (member (moveNodSet, n))
                         andalso not (precoloredNode n)
@@ -42,13 +48,15 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
                                     (candidates @ nodeStack) moveNodSet end
 
       fun coalesce graph moveGraph = (* Briggs *)
-        let fun coalesceMoveGraph g mg (a, b) =
-              let val newNeigh = List.filter (fn x => not $ isEdge g (a, x))
-                                             $ listItems $ delete (succ mg b, a)
-                  val mg1 = foldl (fn (x, mmg) => addUndEdge mmg (a, x))
-                                  mg newNeigh
-                  val mg2 = rmNodeMG mg1 b
-               in mg2 end
+        let fun coalesceGraph g mg (a, b) =
+              let val g1 = coalesceUndEdge g (a, b)
+                val mg1 = coalesceUndEdge mg (a, b)
+                val mg2 = Splayset.foldl (fn (x, mmg) => if isEdge g1 (a, x)
+                                              then rmEdgeMG mmg (a, x) else mmg)
+                                         mg1 $ succ mg1 a
+                val mg3 = if isNode mg2 a andalso degree mg2 a = 0
+                            then rmNode mg2 a else mg2
+               in (g1, mg3) end
             fun considerMove st _ []= st
               | considerMove (lst, g, mg) a (b::xs) =
               let val aAndB = union (succ g a, succ g b)
@@ -56,8 +64,8 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
                                                         orelse precoloredNode a)
                                                  $ listItems aAndB
                in if nIt < colorNum
-                   then ((a, b)::lst, coalesceUndEdge g (b, a),
-                         coalesceMoveGraph g mg (b, a))
+                   then let val (g1, mg1) = coalesceGraph g mg (b, a)
+                         in ((a, b)::lst, g1, mg1) end
                    else considerMove (lst, g, mg) a xs end
             fun considerMoveNode (n, st as (lst, g, mg)) = if isNode mg n
                     then considerMove st n $ listItems $ succ mg n
