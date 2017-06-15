@@ -60,7 +60,7 @@ fun codegen frame (stm: stm) : instr list =
             | munchArgsStack (x::xs) =
                 let val _ = case x of
                     CONST i => emitOper ("pushq $"^(st i)) [] []
-                  | NAME n => emitOper ("pushq "^n) [] []
+                  | NAME n => emitOper ("pushq $"^n) [] []
                   | TEMP t => emitOper "pushq 's0" [t] []
                   (* Shouldn't happen because of the definition of callExp. *)
                   | MEM (TEMP t) => emitOper "pushq ('s0)" [t] []
@@ -110,7 +110,7 @@ fun codegen frame (stm: stm) : instr list =
                   else (emitOper "pushq $0" [] []; diffTmp + 1)
             val _ = emitOper ("call "^n) (munchArgs args) calldefs
           in if diff > 0
-               then emitOper ("addq $"^(st diff)^", 'd0") [] []
+               then emitOper ("addq $"^(st (diff * WSize))^", %rsp") [] []
                else ()
           end
       | munchStm (EXP (CALL _)) = raise Fail "Invalid call with no label."
