@@ -26,6 +26,7 @@ val regToString: register -> string
 
 val newFrame : {name: temp.label, origName: string, formals: bool list} -> frame
 val name : frame -> temp.label
+val origName : frame -> string
 val formals : frame -> access list
 
 val string: temp.label -> string -> string

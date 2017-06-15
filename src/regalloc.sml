@@ -10,12 +10,15 @@ open dict
 open liveness
 open temp
 
-fun addSpill frame instrLst spillLst = let
+infixr 0 $
+fun x $ y = x y
+
+fun addSpill frame auxTmps instrLst spillLst = let
       fun newTemps lst = let fun f (tmp, d) = if dictExists d tmp then d
-                                              else dictInsert d tmp (newTemp())
+                                              else dictInsert d tmp $ newTemp()
                           in foldl f (dictNewStr()) lst end
 
-      val acc = foldl (fn (tmp, d) => dictInsert d tmp (allocLocal frame true))
+      val acc = foldl (fn (tmp, d) => dictInsert d tmp $ allocLocal frame true)
                       (dictNewStr()) spillLst
 
       fun intersec [] _ = []
@@ -42,31 +45,38 @@ fun addSpill frame instrLst spillLst = let
                 @ load ss tmps
           | _ => raise Fail "Never happen"
 
-      fun update [] = []
-        | update (AOPER {assem, src, dst, jump} ::xs) = let
+      fun update updated auxTmps [] = (rev updated, auxTmps)
+        | update updated auxTmps (AOPER {assem, src, dst, jump} ::xs) = let
             val srcInt = intersec spillLst src
             val dstInt = intersec spillLst dst
-            val tmps = newTemps (dstInt @ srcInt)
-          in load srcInt tmps @
-             [AOPER {assem=assem, src=replace tmps src,
-                     dst=replace tmps dst, jump=jump}] @
-             store dstInt tmps @ update xs
+            val tmps = newTemps $ dstInt @ srcInt
+            val auxTmps1 = Splayset.addList (auxTmps, map #2 $ dictToList tmps)
+          in update ((store dstInt tmps) @
+                     [AOPER {assem=assem, src=replace tmps src,
+                             dst=replace tmps dst, jump=jump}] @
+                     (load srcInt tmps) @
+                     updated) auxTmps1 xs
           end
-        | update (AMOVE {assem, src, dst} ::xs) = let
+        | update updated auxTmps (AMOVE {assem, src, dst} ::xs) = let
             val srcInt = intersec spillLst [src]
             val dstInt = intersec spillLst [dst]
             val tmps = newTemps (dstInt @ srcInt)
-          in load srcInt tmps @
-             [AMOVE {assem=assem, src=hd (replace tmps [src]),
-                     dst=hd (replace tmps [dst])}] @
-             store dstInt tmps @ update xs
+            val auxTmps1 = Splayset.addList (auxTmps, map #2 $ dictToList tmps)
+          in update ((store dstInt tmps) @
+                     [AMOVE {assem=assem, src=hd $ replace tmps [src],
+                             dst=hd $ replace tmps [dst]}] @
+                     (load srcInt tmps) @
+                     updated) auxTmps1 xs
           end
-        | update ((l as ALABEL {assem, lab}) ::xs) = l :: update xs
+        | update updated auxTmps ((l as ALABEL {assem, lab}) ::xs) =
+            update (l :: updated) auxTmps xs
+
     in
-      update instrLst
+      update [] auxTmps instrLst
     end
 
-fun spillCost nod = 1 (* TODO: improve spillCost *)
+fun spillCost auxTmps gtemp nod = if Splayset.member (auxTmps,dictGet gtemp nod)
+                                    then 1 else 0
 
 (* given a list of assem instructions and the associated frame, returns a
  * register allocation with a new list of instructions including some
@@ -74,13 +84,22 @@ fun spillCost nod = 1 (* TODO: improve spillCost *)
  * alloc: instr list -> frame -> instr list * allocation *)
 
 fun alloc instrLst frame = let
-      val (fgraph, nodeLst) = instrs2graph instrLst
-      val (igraph, liveOut) = interferenceGraph fgraph nodeLst
-      val (allocFn, spillLst) = color {interference=igraph, initial=tempMap,
-                                     spillCost=spillCost, registers=machineRegs}
-    in case spillLst of
-         [] => (instrLst, allocFn) (* nothing to spill => done *)
-       | _ => alloc (addSpill frame instrLst spillLst) frame
-    end
+    (* allocAux keeps track of the new temps used for spilled temps. We don't
+     * want to spill these auxiliary temps. *)
+    fun allocAux instrLst frame auxTmps = let
+        val (fgraph, nodeLst) = instrs2graph instrLst
+        val (igraph, liveOut) = interferenceGraph fgraph nodeLst
+        val (allocFn, spillLst) = color {
+                      interference=igraph,
+                      initial=tempMap,
+                      spillCost=spillCost auxTmps $ #gtemp igraph,
+                      registers=machineRegs}
+      in case spillLst of
+           [] => (instrLst, allocFn) (* nothing to spill => done *)
+         | _ => let val (instrSpilled, auxTmps1) =
+                      addSpill frame auxTmps instrLst spillLst
+                in allocAux instrSpilled frame auxTmps1 end
+      end
+ in allocAux instrLst frame $ Splayset.empty String.compare end
 
 end

@@ -103,6 +103,8 @@ fun newFrame {name, origName, formals} = let
 
 fun name ({name, ...}: frame) = name
 
+fun origName ({origName, ...}: frame) = origName
+
 fun formals ({formals, ...}: frame) = formals
 
 fun exp (InFrame k) = MEM (BINOP (PLUS, TEMP FP, CONST k))

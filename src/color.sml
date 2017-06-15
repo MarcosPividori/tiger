@@ -73,13 +73,17 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
         | (x::_) => let val (g, mg) = (rmNode graph x, rmNodeMG moveGraph x)
                      in ([x], g, mg) end
 
-      (* TODO: use spillCost *)
-      fun posSpill graph moveGraph = case (List.filter (not o precoloredNode)
-                                                       $ nodes graph) of
+      fun posSpill graph moveGraph = case List.filter (not o precoloredNode)
+                                                      $ nodes graph of
             [] => ([], graph, moveGraph)
-          | (x::_) => ([x], rmNode graph x, if isNode moveGraph x
-                                              then rmNodeMG moveGraph x
-                                              else moveGraph)
+          | lst => let
+              val scLst = map (fn x => (x, spillCost x)) lst
+              val (minNod,_) = foldl
+                  (fn ((a, c), (mn, mc)) => if c < mc then (a, c) else (mn, mc))
+                  (hd scLst) $ tl scLst
+            in ([minNod], rmNode graph minNod, if isNode moveGraph minNod
+                                                 then rmNodeMG moveGraph minNod
+                                                 else moveGraph) end
 
       datatype ST = Simplify | Coalesce | Freeze | PosSpill
 
@@ -147,11 +151,6 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
       (* convert node2reg map to temp2reg *)
       val tmp2reg = foldl (fn ((n, r), d) => dictInsert d (dictGet gtemp n) r)
                           (dictNewStr()) $ dictToList node2reg
-
-(*
-      val _ = showigraph {graph=moveGraph, tnode=tnode, gtemp=gtemp, moves=moves}
-      val _ = showigraph {graph=g1, tnode=tnode, gtemp=gtemp, moves=moves}
-*)
 
   in (tmp2reg, map (dictGet gtemp) spilled) end
 end
