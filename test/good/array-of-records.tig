@@ -1,0 +1,18 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "13 5 nil" */
+let
+  type R2 = R
+  type R = {i:int, next:R}
+  type arr = array of R2
+  var x : arr := arr[10] of nil
+  var r:= R{i=10, next=R{i=11, next=R2{i=12, next=R2{i=13, next=nil}}}}
+in
+  x[4] := r;
+  printint(x[4].next.next.next.i);
+  print(" ");
+  r.next.next.next.i := 5;
+  printint(x[4].next.next.next.i);
+  print(" ");
+  if x[3] = nil then print("nil") else (); 0
+end
+
