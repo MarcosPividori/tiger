@@ -75,8 +75,10 @@ fun addSpill frame auxTmps instrLst spillLst = let
       update [] auxTmps instrLst
     end
 
-fun spillCost auxTmps gtemp nod = if Splayset.member (auxTmps,dictGet gtemp nod)
-                                    then 1 else 0
+fun spillCost auxTmps gtemp tbound igraph nod =
+      if Splayset.member (auxTmps,dictGet gtemp nod)
+        then tbound + 10
+        else tbound - (degree igraph nod)
 
 (* given a list of assem instructions and the associated frame, returns a
  * register allocation with a new list of instructions including some
@@ -92,7 +94,8 @@ fun alloc instrLst frame = let
         val (allocFn, spillLst) = color {
                       interference=igraph,
                       initial=tempMap,
-                      spillCost=spillCost auxTmps $ #gtemp igraph,
+                      spillCost=spillCost auxTmps (#gtemp igraph)
+                      (*top bound for degree*) (length $ nodes $ #graph igraph),
                       registers=machineRegs}
       in case spillLst of
            [] => (instrLst, allocFn) (* nothing to spill => done *)

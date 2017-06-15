@@ -15,7 +15,7 @@ val color: {
       (* the spilling cost of each temporary, which can be just the number of
        * uses and defs, or better yet, uses and defs weighted by occurrence
        * in loops and nested loops. *)
-      spillCost: graph.node -> int,
+      spillCost: graph.graph -> graph.node -> int,
       (* list of colors (registers) *)
       registers: frame.register list}
         ->

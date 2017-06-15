@@ -77,7 +77,7 @@ fun color {interference= ig as {graph, tnode, gtemp, moves},
                                                       $ nodes graph of
             [] => ([], graph, moveGraph)
           | lst => let
-              val scLst = map (fn x => (x, spillCost x)) lst
+              val scLst = map (fn x => (x, spillCost graph x)) lst
               val (minNod,_) = foldl
                   (fn ((a, c), (mn, mc)) => if c < mc then (a, c) else (mn, mc))
                   (hd scLst) $ tl scLst
