@@ -1,0 +1,91 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "echo 11 2 5 6 5 9 n | ./a.out" => "2 5 5 6 9 11" */
+/* EXPECTED-RUN: "echo 9 8 7 6 5 n | ./a.out" => "5 6 7 8 9" */
+let
+  type any = {any : int}
+
+  type list = {first : int, rest : list}
+
+  function readint (any : any) : int =
+    let
+      var i := 0
+      var buffer := " "
+      function isdigit (s : string) : int =
+        ord ("0") <= ord (s) & ord (s) <= ord ("9")
+      function skipto () =
+    	   while buffer = " " | buffer = "\n"
+    	     do buffer := getchar ()
+    in
+      skipto ();
+      any.any := isdigit (buffer);
+      while isdigit (buffer) do
+        (i := i * 10 + ord (buffer) - ord ("0");
+         buffer := getchar ());
+      i
+    end
+
+  function readlist () : list =
+    let
+      var any := any{any=0}
+      var i := readint (any)
+    in
+      if any.any
+        then list{first=i, rest=readlist ()}
+        else nil
+    end
+
+  function merge (a : list, b : list) : list =
+    if a = nil then b
+    else if b = nil then a
+    else if a.first < b.first
+       then list {first = a.first, rest = merge (a.rest, b)}
+       else list {first = b.first, rest = merge (a, b.rest)}
+
+  function printint (i : int) =
+    let
+      function aux (i : int) = if i > 0
+ 	     then (aux (i/10); print (chr (i-i/10*10+ord ("0"))))
+    in
+      if i < 0 then (print ("-"); aux (-i))
+      else if i>0 then aux (i)
+      else print ("0")
+    end
+
+  function printlist (l : list) =
+    if l = nil then print ("\n")
+    else (printint (l.first); print (" "); printlist (l.rest))
+
+  function listlen (l : list):int =
+    if l = nil then 0 else 1 + listlen(l.rest)
+
+  type listpair = {first : list, second : list}
+
+  function split (l : list):listpair =
+    if l = nil
+      then listpair {first = nil, second = nil}
+      else
+        let
+          var len := listlen (l)
+          var take := (len - 1) / 2
+          var p := l
+          var snd := ((for i := 1 to take do
+                         p := p.rest); p.rest)
+        in
+          p.rest := nil;
+          listpair {first = l, second = snd}
+        end
+
+  function mergesort (l : list) : list =
+    if l = nil then nil
+    else if l.rest = nil then l
+    else
+      let
+        var lp := split (l)
+      in
+        merge (mergesort(lp.first), mergesort(lp.second))
+      end
+
+  var list := readlist ()
+in
+  printlist (mergesort (list)); 0
+end
