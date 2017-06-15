@@ -23,6 +23,8 @@ val base_tenv : Tenv = dictInsList (dictNewStr())
 val base_venv : Venv = dictInsList (dictNewStr())
   [("print", Func{level=outermost, label="print",
           formals=[TString], result=TUnit, extern=true}),
+  ("printint", Func{level=outermost, label="printint",
+          formals=[TInt], result=TUnit, extern=true}),
   ("flush", Func{level=outermost, label="flush",
           formals=[], result=TUnit, extern=true}),
   ("getchar", Func{level=outermost, label="getstr",

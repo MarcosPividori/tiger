@@ -108,6 +108,10 @@ void print(String* s) {
     putchar(*p);
 }
 
+void printint(int64_t n) {
+  printf("%ld", n);
+}
+
 void flush() {
   fflush(stdout);
 }
