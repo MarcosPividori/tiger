@@ -1,0 +1,5 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "1" */
+let var a:= let type A = array of int
+             in A[10] of 0 end
+in printint(a[0] = a[1]); 0 end

@@ -1,0 +1,11 @@
+/* EXPECTED-COMP: "Error: Cycle" */
+let
+  type a = int
+  type b = a
+in
+  let
+    type a = c
+    type c = b
+    type b = a
+  in 0 end
+end

@@ -1,0 +1,8 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "second definition" */
+let function f () =
+  let function g () =
+    let function f () = print("second definition")
+    in f () end
+  in g() end
+in f();0 end

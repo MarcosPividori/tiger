@@ -1,0 +1,12 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "16 17 18 19 20 0" */
+let var x:= 10
+  function f (y:int) =
+    (for i:=1 to 5 do
+      let function g():int = x + y + i
+       in printint(g()); print(" ") end)
+
+  function h (i:int):int =
+    let function j():int = i
+    in if i > 0 then h (i - 1) else j() end
+in f(5); printint(h(6)); 0 end

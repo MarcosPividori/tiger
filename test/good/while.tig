@@ -1,0 +1,12 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "10 9 8 7 6 5 4 3 2 1" */
+let
+  function f(i:int) =
+    let
+      var n := i
+    in
+      (while n do (printint(n);print(" ");n:=n-1); print("\n"))
+    end
+in
+  f(10);0
+end

@@ -1,0 +1,10 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "./a.out" => "world! 6" */
+let var str := "hello world!"
+    var subs := substring(str, 6, 6)
+    var s := size(subs)
+in print(subs);
+   print(" ");
+   printint(s);
+   0
+end
