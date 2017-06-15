@@ -339,7 +339,7 @@ fun transExp topLevel loopLevel venv tenv = let
                       (fn (({typ,name,escape},acc),v) =>
                          dictRInsert v name $ Var {ty=check ln typ,
                                                  access=acc,
-                                                 depth=getDepth topLevel})
+                                                 depth=getDepth lev})
                       venv' $ ListPair.zip (params, formals lev)
                 val {ty, exp=eBody} = transExp lev nilLoopLevel venv'' tenv body
               in
