@@ -110,7 +110,10 @@ fun formals ({formals, ...}: frame) = formals
 fun exp (InFrame k) = MEM (BINOP (PLUS, TEMP FP, CONST k))
   | exp (InReg l) = TEMP l
 
-fun externalCall (s, l) = ESEQ (EXP (CALL (NAME s, l)), TEMP RV)
+fun externalCall (s, l) =
+    let val ret = temp.newTemp()
+    in ESEQ (SEQ (EXP (CALL (NAME s, l)), MOVE (TEMP ret, TEMP RV)), TEMP ret)
+    end
 
 val compareRegister = String.compare
 

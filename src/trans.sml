@@ -184,10 +184,8 @@ fun recordExp l =
       val l' = Listsort.sort(fn ((_,_,m),(_,_,n)) => Int.compare(m, n)) lexps
       val lexps2 = map #2 l'
     in
-      Ex $ ESEQ (seq $ lexps1 @ [ EXP $ externalCall("_allocRecord",
-                                                     CONST (length l)::lexps2)
-                                , MOVE (TEMP ret, TEMP RV)],
-                 TEMP ret)
+      Ex $ ESEQ (seq lexps1,
+                 externalCall("_allocRecord", CONST (length l)::lexps2))
     end
 
 fun seqExp ([]:exp list) = Nx (EXP (CONST 0))
