@@ -1,0 +1,96 @@
+/* EXPECTED-COMP: "Successful" */
+/* EXPECTED-RUN: "echo 2 2 2 1 1 1 1 1 1 1 1 | ./a.out" => "RES:\n2 2\n2 2" */
+/* Test:
+  1 1   1 1   2 2
+  1 1 x 1 1 = 2 2 */
+/* EXPECTED-RUN: "echo 2 3 2 1 1 1 2 2 2 1 4 2 5 3 6 | ./a.out" => "RES:\n6 15\n15 30" */
+/* Test:
+            1 4
+  1 1 1     2 5      6 15
+  2 2 2  x  3 6  =  15 30 */
+let
+  type any = {any : int}
+  type intArr = array of int
+  type matrix = array of intArr
+
+  function readint (any : any) : int =
+    let
+      var i := 0
+      var buffer := " "
+      function isdigit (s : string) : int =
+        ord ("0") <= ord (s) & ord (s) <= ord ("9")
+      function skipto () =
+    	   while buffer = " " | buffer = "\n"
+    	     do buffer := getchar ()
+    in
+      skipto ();
+      any.any := isdigit (buffer);
+      while isdigit (buffer) do
+        (i := i * 10 + ord (buffer) - ord ("0");
+         buffer := getchar ());
+      i
+    end
+
+  function readInt () : int =
+    let var any := any{any=0}
+      var i := 0
+    in
+      while not(any.any) do
+        i := readint (any);
+      i
+    end
+
+  function readArr (len : int) : intArr =
+    let var arr := intArr [len] of 0
+    in
+      (for i := 0 to len - 1 do
+         arr[i] := readInt());
+      arr
+    end
+
+  function readMat (a : int, b : int) : matrix =
+    let var mat := matrix [a] of (intArr [0] of 0)
+     in
+       (for i := 0 to a - 1 do
+          mat[i] := readArr (b));
+       mat
+     end
+
+  function printint (i : int) =
+    let
+      function aux (i : int) = if i > 0
+ 	     then (aux (i/10); print (chr (i-i/10*10+ord ("0"))))
+    in
+      if i < 0 then (print ("-"); aux (-i))
+      else if i>0 then aux (i)
+      else print ("0")
+    end
+
+  function printMat (m : matrix, a : int, b : int) =
+    (for i := 0 to a - 1 do
+      ((for j := 0 to b - 1 do
+          (printint (m[i][j]); print(" ")));
+       print ("\n")))
+
+  function multMat (m1 : matrix, m2 : matrix, a : int, b : int, c : int) : matrix =
+    let var mat := (let var mt := matrix [a] of (intArr [c] of 0)
+                     in (for i := 0 to a - 1 do mt[i] := intArr [c] of 0);
+                        mt end)
+     in
+       (for i := 0 to a - 1 do
+         (for j := 0 to c - 1 do
+           (for k := 0 to b - 1 do
+             mat[i][j] := mat[i][j] + m1[i][k] * m2[k][j])));
+       mat
+    end
+
+  var a := readInt()
+  var b := readInt()
+  var c := readInt()
+
+  var mat1 := readMat(a, b)
+  var mat2 := readMat(b, c)
+  var mat3 := multMat(mat1, mat2, a, b, c)
+in
+  print ("RES:\n"); printMat (mat3, a, c); 0
+end
